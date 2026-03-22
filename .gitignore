@@ -1,0 +1,32 @@
+# Colcon build artifacts
+build/
+install/
+log/
+~/colcon_logs/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# VSCode
+.vscode/
+
+# Cursor
+.cursor/
+.cursorignore
+.cursorules
+*.cursor-tutor
+
+# ROS logs
+~/.ros/log/
+
+# Generated URDF (always generate from xacro, never commit the output)
+*.urdf
+
+# Gazebo cache
+~/.gazebo/
+
+# OS
+.DS_Store
+Thumbs.db
