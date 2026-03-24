@@ -75,6 +75,7 @@
       <child_link>link</child_link>
       <attach_topic>/can/attach</attach_topic>
       <detach_topic>/can/detach</detach_topic>
+      <detach_on_start>true</detach_on_start>
     </plugin>
     <plugin filename="gz-sim-detachable-joint-system"
             name="gz::sim::systems::DetachableJoint">
@@ -83,6 +84,7 @@
       <child_link>link</child_link>
       <attach_topic>/ball/attach</attach_topic>
       <detach_topic>/ball/detach</detach_topic>
+      <detach_on_start>true</detach_on_start>
     </plugin>
     <plugin filename="gz-sim-detachable-joint-system"
             name="gz::sim::systems::DetachableJoint">
@@ -91,6 +93,7 @@
       <child_link>link</child_link>
       <attach_topic>/toy_block_1/attach</attach_topic>
       <detach_topic>/toy_block_1/detach</detach_topic>
+      <detach_on_start>true</detach_on_start>
     </plugin>
     <plugin filename="gz-sim-detachable-joint-system"
             name="gz::sim::systems::DetachableJoint">
@@ -99,6 +102,7 @@
       <child_link>link</child_link>
       <attach_topic>/toy_block_2/attach</attach_topic>
       <detach_topic>/toy_block_2/detach</detach_topic>
+      <detach_on_start>true</detach_on_start>
     </plugin>
     <plugin filename="gz-sim-detachable-joint-system"
             name="gz::sim::systems::DetachableJoint">
@@ -107,6 +111,7 @@
       <child_link>link</child_link>
       <attach_topic>/toy_cylinder_1/attach</attach_topic>
       <detach_topic>/toy_cylinder_1/detach</detach_topic>
+      <detach_on_start>true</detach_on_start>
     </plugin>
     <plugin filename="gz-sim-detachable-joint-system"
             name="gz::sim::systems::DetachableJoint">
@@ -115,6 +120,7 @@
       <child_link>link</child_link>
       <attach_topic>/toy_block_3/attach</attach_topic>
       <detach_topic>/toy_block_3/detach</detach_topic>
+      <detach_on_start>true</detach_on_start>
     </plugin>
 
     <plugin filename="gz-sim-triggered-publisher-system"
