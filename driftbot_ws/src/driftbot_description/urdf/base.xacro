@@ -6,8 +6,8 @@
   <xacro:property name="base_len_x"   value="0.52"/>
   <xacro:property name="base_len_y"   value="0.42"/>
   <xacro:property name="base_len_z"   value="0.10"/>
-  <xacro:property name="wheel_radius" value="0.10"/>
-  <xacro:property name="wheel_width"  value="0.12"/>
+  <xacro:property name="wheel_radius" value="0.165"/>
+  <xacro:property name="wheel_width"  value="0.10"/>
   <xacro:property name="wheel_mass"   value="0.5"/>
   <!-- Lateral offset of wheel joint from base_link (half track width). Was 0.235; increased so tires sit outside the chassis box (base_len_y/2 = 0.21). -->
   <xacro:property name="wheel_track_half_y" value="0.275"/>
@@ -17,7 +17,7 @@
   <joint name="base_joint" type="fixed">
     <parent link="base_footprint"/>
     <child  link="base_link"/>
-    <origin xyz="0.0 0.0 ${wheel_radius + 0.065}" rpy="0 0 0"/>
+    <origin xyz="0.0 0.0 ${wheel_radius}" rpy="0 0 0"/>
   </joint>
 
   <link name="base_link">

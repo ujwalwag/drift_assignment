@@ -13,8 +13,10 @@ from launch import LaunchDescription
 from launch.actions import (
     AppendEnvironmentVariable,
     DeclareLaunchArgument,
+    ExecuteProcess,
     IncludeLaunchDescription,
     SetEnvironmentVariable,
+    TimerAction,
 )
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, LaunchConfiguration
@@ -50,7 +52,7 @@ def generate_launch_description():
         SetEnvironmentVariable(name="MESA_GLSL_VERSION_OVERRIDE", value="330"),
 
         DeclareLaunchArgument(
-            "spawn_z", default_value="0.12",
+            "spawn_z", default_value="0.01",
             description="Robot spawn z-height in metres.",
         ),
 
@@ -81,5 +83,20 @@ def generate_launch_description():
                 "-z",     LaunchConfiguration("spawn_z"),
             ],
             output="screen",
+        ),
+
+        # detach_on_start in the URDF is ignored by gz-sim 8.10.0 — the
+        # DetachableJoint plugin attaches all objects at startup. Publishing to
+        # /magnet_off via the TriggeredPublisher releases all 6 at once.
+        # 5 s gives Gazebo and the robot-spawn node enough time to initialise.
+        TimerAction(
+            period=5.0,
+            actions=[
+                ExecuteProcess(
+                    cmd=["gz", "topic", "-t", "/magnet_off",
+                         "-m", "gz.msgs.Empty", "-p", ""],
+                    output="screen",
+                )
+            ],
         ),
     ])
