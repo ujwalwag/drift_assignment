@@ -1,0 +1,146 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+<xacro:property name="torso_mass"  value="5.0"/>
+<xacro:property name="torso_lx"    value="0.20"/>
+<xacro:property name="torso_ly"    value="0.20"/>
+<xacro:property name="torso_lz"    value="0.54"/>
+<xacro:property name="torso_z"     value="${base_len_z + 0.05 + torso_lz/2.0}"/>
+
+<xacro:property name="face_mass"   value="0.15"/>
+<xacro:property name="face_lx"     value="0.008"/>
+<xacro:property name="face_ly"     value="0.42"/>
+<xacro:property name="face_lz"     value="0.24"/>
+
+  <link name="torso_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><box size="${torso_lx} ${torso_ly} ${torso_lz}"/></geometry>
+      <material name="burgundy"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><box size="${torso_lx} ${torso_ly} ${torso_lz}"/></geometry>
+    </collision>
+    <xacro:inertia_box m="${torso_mass}" lx="${torso_lx}" ly="${torso_ly}" lz="${torso_lz}"/>
+  </link>
+
+  <joint name="torso_joint" type="fixed">
+    <parent link="base_link"/>
+    <child  link="torso_link"/>
+    <origin xyz="0.0 0.0 ${torso_z}" rpy="0 0 0"/>
+  </joint>
+
+  <link name="face_panel_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><box size="${face_lx} ${face_ly} ${face_lz}"/></geometry>
+      <material name="cyan"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><box size="${face_lx} ${face_ly} ${face_lz}"/></geometry>
+    </collision>
+    <xacro:inertia_box m="${face_mass}" lx="${face_lx}" ly="${face_ly}" lz="${face_lz}"/>
+  </link>
+
+<joint name="face_panel_joint" type="fixed">
+  <parent link="torso_link"/>
+  <child  link="face_panel_link"/>
+  <origin xyz="${torso_lx/2.0 + face_lx/2.0} 0.0 0.24" rpy="0 0 0"/>
+</joint>
+<!-- "<"> glyph -->
+<link name="glyph_lt_top_link">
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry><box size="0.003 0.032 0.006"/></geometry>
+    <material name="burgundy"/>
+  </visual>
+  <xacro:inertia_box m="0.0015" lx="0.003" ly="0.032" lz="0.006"/>
+</link>
+<joint name="glyph_lt_top_joint" type="fixed">
+  <parent link="face_panel_link"/>
+  <child  link="glyph_lt_top_link"/>
+  <origin xyz="0.010 0.060 0.016" rpy="-0.95 0 0"/>
+</joint>
+
+<link name="glyph_lt_bottom_link">
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry><box size="0.003 0.032 0.006"/></geometry>
+    <material name="burgundy"/>
+  </visual>
+  <xacro:inertia_box m="0.0015" lx="0.003" ly="0.032" lz="0.006"/>
+</link>
+<joint name="glyph_lt_bottom_joint" type="fixed">
+  <parent link="face_panel_link"/>
+  <child  link="glyph_lt_bottom_link"/>
+  <origin xyz="0.010 0.060 -0.016" rpy="0.95 0 0"/>
+</joint>
+
+<link name="glyph_quote_left_link">
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry><box size="0.003 0.008 0.028"/></geometry>
+    <material name="burgundy"/>
+  </visual>
+  <xacro:inertia_box m="0.0015" lx="0.003" ly="0.008" lz="0.028"/>
+</link>
+<joint name="glyph_quote_left_joint" type="fixed">
+  <parent link="face_panel_link"/>
+  <child  link="glyph_quote_left_link"/>
+  <origin xyz="0.010 0.008 0.028" rpy="-0.15 0 0"/>
+</joint>
+
+<link name="glyph_quote_right_link">
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry><box size="0.003 0.008 0.028"/></geometry>
+    <material name="burgundy"/>
+  </visual>
+  <xacro:inertia_box m="0.0015" lx="0.003" ly="0.008" lz="0.028"/>
+</link>
+<joint name="glyph_quote_right_joint" type="fixed">
+  <parent link="face_panel_link"/>
+  <child  link="glyph_quote_right_link"/>
+  <origin xyz="0.010 -0.008 0.028" rpy="-0.15 0 0"/>
+</joint>
+
+<link name="glyph_gt_top_link">
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry><box size="0.003 0.032 0.006"/></geometry>
+    <material name="burgundy"/>
+  </visual>
+  <xacro:inertia_box m="0.0015" lx="0.003" ly="0.032" lz="0.006"/>
+</link>
+<joint name="glyph_gt_top_joint" type="fixed">
+  <parent link="face_panel_link"/>
+  <child  link="glyph_gt_top_link"/>
+  <origin xyz="0.010 -0.060 0.016" rpy="0.95 0 0"/>
+</joint>
+
+<link name="glyph_gt_bottom_link">
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry><box size="0.003 0.032 0.006"/></geometry>
+      <material name="burgundy"/>
+  </visual>
+  <xacro:inertia_box m="0.0015" lx="0.003" ly="0.032" lz="0.006"/>
+</link>
+<joint name="glyph_gt_bottom_joint" type="fixed">
+  <parent link="face_panel_link"/>
+  <child  link="glyph_gt_bottom_link"/>
+  <origin xyz="0.010 -0.060 -0.016" rpy="-0.95 0 0"/>
+</joint>
+
+  <gazebo reference="torso_link"/>
+<gazebo reference="face_panel_link"><material>Gazebo/Grey</material></gazebo>
+<gazebo reference="glyph_lt_top_link"/>
+<gazebo reference="glyph_lt_bottom_link"/>
+<gazebo reference="glyph_quote_left_link"/>
+<gazebo reference="glyph_quote_right_link"/>
+<gazebo reference="glyph_gt_top_link"/>
+<gazebo reference="glyph_gt_bottom_link"/>
+
+</robot>

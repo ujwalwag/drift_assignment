@@ -1,0 +1,108 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:property name="mesh_scale"   value="0.004065 0.004065 0.004065"/>
+  <xacro:property name="base_mass"    value="8.0"/>
+  <xacro:property name="base_len_x"   value="0.52"/>
+  <xacro:property name="base_len_y"   value="0.42"/>
+  <xacro:property name="base_len_z"   value="0.10"/>
+  <xacro:property name="wheel_radius" value="0.10"/>
+  <xacro:property name="wheel_width"  value="0.12"/>
+  <xacro:property name="wheel_mass"   value="0.5"/>
+  <!-- Lateral offset of wheel joint from base_link (half track width). Was 0.235; increased so tires sit outside the chassis box (base_len_y/2 = 0.21). -->
+  <xacro:property name="wheel_track_half_y" value="0.275"/>
+
+  <link name="base_footprint"/>
+
+  <joint name="base_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child  link="base_link"/>
+    <origin xyz="0.0 0.0 ${wheel_radius + 0.065}" rpy="0 0 0"/>
+  </joint>
+
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 ${pi/2}"/>
+      <geometry>
+        <mesh filename="package://driftbot_description/meshes/base_link.stl" scale="${mesh_scale}"/>
+      </geometry>
+      <material name="dark_grey"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><box size="${base_len_x} ${base_len_y} ${base_len_z}"/></geometry>
+    </collision>
+    <xacro:inertia_box m="${base_mass}" lx="${base_len_x}" ly="${base_len_y}" lz="${base_len_z}"/>
+  </link>
+
+  <gazebo reference="base_link">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.8</mu1>
+    <mu2>0.8</mu2>
+  </gazebo>
+
+  <link name="top_shell_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 ${pi/2}"/>
+      <geometry>
+        <mesh filename="package://driftbot_description/meshes/top_shell_link.stl" scale="${mesh_scale}"/>
+      </geometry>
+      <material name="dark_grey"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><box size="0.732 0.488 0.244"/></geometry>
+    </collision>
+    <xacro:inertia_box m="1.324" lx="0.732" ly="0.488" lz="0.244"/>
+  </link>
+
+  <gazebo reference="top_shell_link">
+    <material>Gazebo/DarkGrey</material>
+  </gazebo>
+
+  <joint name="base_top_joint" type="fixed">
+    <parent link="base_link"/>
+    <child  link="top_shell_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <xacro:macro name="wheel" params="name jx jy jz vox voy voz mesh">
+    <link name="wheel_${name}">
+      <visual>
+        <origin xyz="${vox} ${voy} ${voz}" rpy="0 0 ${pi/2}"/>
+        <geometry>
+          <mesh filename="package://driftbot_description/meshes/${mesh}" scale="${mesh_scale}"/>
+        </geometry>
+        <material name="black"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </collision>
+      <xacro:inertia_cylinder m="${wheel_mass}" r="${wheel_radius}" l="${wheel_width}"/>
+    </link>
+
+    <joint name="wheel_${name}_joint" type="continuous">
+      <parent link="base_link"/>
+      <child  link="wheel_${name}"/>
+      <origin xyz="${jx} ${jy} ${jz}" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <dynamics damping="0.05" friction="0.1"/>
+    </joint>
+
+    <gazebo reference="wheel_${name}">
+      <material>Gazebo/Black</material>
+      <mu1>1.2</mu1>
+      <mu2>1.2</mu2>
+      <kp>1e6</kp>
+      <kd>1.0</kd>
+    </gazebo>
+  </xacro:macro>
+
+  <xacro:wheel name="fl" jx="0.19"  jy="${wheel_track_half_y}"  jz="0.0" vox="-0.19677" voy="-0.26422" voz="-0.01951" mesh="wheel_front_left_link.stl"/>
+  <xacro:wheel name="fr" jx="0.19"  jy="-${wheel_track_half_y}" jz="0.0" vox="-0.19753" voy="0.26382" voz="-0.01951" mesh="wheel_front_right_link.stl"/>
+  <xacro:wheel name="rl" jx="-0.19" jy="${wheel_track_half_y}"  jz="0.0" vox="0.19753" voy="-0.26422" voz="-0.01951" mesh="wheel_back_left_link.stl"/>
+  <xacro:wheel name="rr" jx="-0.19" jy="-${wheel_track_half_y}" jz="0.0" vox="0.19677" voy="0.26382" voz="-0.01951" mesh="wheel_back_right_link.stl"/>
+</robot>

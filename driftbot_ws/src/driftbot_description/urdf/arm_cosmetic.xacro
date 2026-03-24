@@ -1,0 +1,102 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <link name="cosm_shoulder_cap_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><sphere radius="0.028"/></geometry>
+      <material name="dark_grey"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><sphere radius="0.028"/></geometry>
+    </collision>
+    <xacro:inertia_sphere m="0.03" r="0.028"/>
+  </link>
+
+<joint name="cosm_shoulder_cap_joint" type="fixed">
+  <parent link="torso_link"/>
+  <child  link="cosm_shoulder_cap_link"/>
+  <origin xyz="0.02 -0.13 0.16" rpy="0 0 0"/>
+</joint>
+
+<joint name="cosm_shoulder_joint" type="fixed">
+  <parent link="torso_link"/>
+  <child  link="cosm_upper_arm_link"/>
+  <origin xyz="0.02 -0.13 0.16" rpy="0 0 0"/>
+</joint>
+
+<joint name="cosm_elbow_joint" type="fixed">
+  <parent link="cosm_upper_arm_link"/>
+  <child  link="cosm_forearm_link"/>
+  <origin xyz="0 0 -0.18" rpy="0 -0.4 0"/>
+</joint>
+
+
+
+  <link name="cosm_upper_arm_link">
+    <visual>
+      <origin xyz="0 0 -0.09" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.025" length="0.18"/></geometry>
+      <material name="light_grey"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 -0.09" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.025" length="0.18"/></geometry>
+    </collision>
+    <xacro:inertia_cylinder m="0.30" r="0.025" l="0.18"/>
+  </link>
+
+
+
+  <link name="cosm_forearm_link">
+    <visual>
+      <origin xyz="0 0 -0.08" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.022" length="0.16"/></geometry>
+      <material name="light_grey"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 -0.08" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.022" length="0.16"/></geometry>
+    </collision>
+    <xacro:inertia_cylinder m="0.20" r="0.022" l="0.16"/>
+  </link>
+
+
+  <link name="cosm_end_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><sphere radius="0.025"/></geometry>
+      <material name="dark_grey"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><sphere radius="0.025"/></geometry>
+    </collision>
+    <xacro:inertia_sphere m="0.05" r="0.025"/>
+  </link>
+
+  <joint name="cosm_wrist_joint" type="fixed">
+    <parent link="cosm_forearm_link"/>
+    <child  link="cosm_end_link"/>
+    <origin xyz="0 0 -0.16" rpy="0 0 0"/>
+  </joint>
+
+  <gazebo reference="cosm_shoulder_cap_link">
+  <material>Gazebo/DarkGrey</material>
+  <gravity>false</gravity>
+</gazebo>
+  <gazebo reference="cosm_upper_arm_link">
+  <material>Gazebo/Grey</material>
+  <gravity>false</gravity>
+</gazebo>
+  <gazebo reference="cosm_forearm_link">
+  <material>Gazebo/Grey</material>
+  <gravity>false</gravity>
+</gazebo>
+  <gazebo reference="cosm_end_link">
+  <material>Gazebo/DarkGrey</material>
+  <gravity>false</gravity>
+</gazebo>
+
+</robot>
