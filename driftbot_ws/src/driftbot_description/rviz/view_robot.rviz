@@ -1,11 +1,24 @@
 Panels:
   - Class: rviz_common/Displays
+    Help Height: 70
     Name: Displays
+    Property Tree Widget:
+      Expanded: ~
+      Splitter Ratio: 0.5
+    Tree Height: 295
   - Class: rviz_common/Views
+    Expanded:
+      - /Current View1
     Name: Views
+    Splitter Ratio: 0.5
 Visualization Manager:
+  Class: ""
   Displays:
-    - Class: rviz_default_plugins/RobotModel
+    - Alpha: 1
+      Class: rviz_default_plugins/RobotModel
+      Collision Enabled: false
+      Description File: ""
+      Description Source: Topic
       Description Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -13,14 +26,316 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /robot_description
       Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        arm_base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        base_footprint:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        camera_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        camera_optical_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        cosm_end_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        cosm_forearm_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        cosm_shoulder_cap_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        cosm_upper_arm_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        face_panel_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        forearm_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        glyph_gt_bottom_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        glyph_gt_top_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        glyph_lt_bottom_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        glyph_lt_top_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        glyph_quote_left_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        glyph_quote_right_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        gripper_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        lidar_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        magnet_zone_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        top_shell_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        torso_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        upper_arm_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wheel_fl:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wheel_fr:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wheel_rl:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wheel_rr:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wrist_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Mass Properties:
+        Inertia: false
+        Mass: false
       Name: RobotModel
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
     - Class: rviz_default_plugins/TF
       Enabled: true
+      Filter (blacklist): ""
+      Filter (whitelist): ""
+      Frame Timeout: 15
+      Frames:
+        All Enabled: true
+        arm_base_link:
+          Value: true
+        base_footprint:
+          Value: true
+        base_link:
+          Value: true
+        camera_link:
+          Value: true
+        camera_optical_link:
+          Value: true
+        cosm_end_link:
+          Value: true
+        cosm_forearm_link:
+          Value: true
+        cosm_shoulder_cap_link:
+          Value: true
+        cosm_upper_arm_link:
+          Value: true
+        face_panel_link:
+          Value: true
+        forearm_link:
+          Value: true
+        glyph_gt_bottom_link:
+          Value: true
+        glyph_gt_top_link:
+          Value: true
+        glyph_lt_bottom_link:
+          Value: true
+        glyph_lt_top_link:
+          Value: true
+        glyph_quote_left_link:
+          Value: true
+        glyph_quote_right_link:
+          Value: true
+        gripper_link:
+          Value: true
+        lidar_link:
+          Value: true
+        magnet_zone_link:
+          Value: true
+        top_shell_link:
+          Value: true
+        torso_link:
+          Value: true
+        upper_arm_link:
+          Value: true
+        wheel_fl:
+          Value: true
+        wheel_fr:
+          Value: true
+        wheel_rl:
+          Value: true
+        wheel_rr:
+          Value: true
+        wrist_link:
+          Value: true
+      Marker Scale: 1
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: true
+      Tree:
+        base_footprint:
+          base_link:
+            lidar_link:
+              {}
+            top_shell_link:
+              {}
+            torso_link:
+              arm_base_link:
+                upper_arm_link:
+                  forearm_link:
+                    wrist_link:
+                      gripper_link:
+                        magnet_zone_link:
+                          {}
+              camera_link:
+                camera_optical_link:
+                  {}
+              cosm_shoulder_cap_link:
+                {}
+              cosm_upper_arm_link:
+                cosm_forearm_link:
+                  cosm_end_link:
+                    {}
+              face_panel_link:
+                glyph_gt_bottom_link:
+                  {}
+                glyph_gt_top_link:
+                  {}
+                glyph_lt_bottom_link:
+                  {}
+                glyph_lt_top_link:
+                  {}
+                glyph_quote_left_link:
+                  {}
+                glyph_quote_right_link:
+                  {}
+            wheel_fl:
+              {}
+            wheel_fr:
+              {}
+            wheel_rl:
+              {}
+            wheel_rr:
+              {}
+      Update Interval: 0
+      Value: true
+  Enabled: true
   Global Options:
     Background Color: 48; 48; 48
     Fixed Frame: base_footprint
+    Frame Rate: 30
   Name: root
+  Tools: ~
+  Transformation:
+    Current:
+      Class: rviz_default_plugins/TF
+  Value: true
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 10
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.05999999865889549
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: true
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05000000074505806
+      Invert Z Axis: false
+      Name: Current View
+      Near Clip Distance: 0.009999999776482582
+      Pitch: 0.7853981852531433
+      Target Frame: <Fixed Frame>
+      Value: Orbit (rviz_default_plugins)
+      Yaw: 0.7853981852531433
+    Saved: ~
+Window Geometry:
+  Displays:
+    collapsed: false
+  Height: 813
+  Hide Left Dock: false
+  Hide Right Dock: false
+  QMainWindow State: 000000ff00000000fd00000001000000000000019b000002d7fc0200000002fb000000100044006900730070006c006100790073010000003b000001a8000000c700fffffffb0000000a0056006900650077007301000001e900000129000000a000ffffff0000011b000002d700000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  Views:
+    collapsed: false
+  Width: 700
+  X: 3071
+  Y: 89

@@ -9,7 +9,7 @@
   <xacro:property name="wheel_radius" value="0.165"/>
   <xacro:property name="wheel_width"  value="0.10"/>
   <xacro:property name="wheel_mass"   value="0.5"/>
-  <!-- Lateral offset of wheel joint from base_link (half track width). Was 0.235; increased so tires sit outside the chassis box (base_len_y/2 = 0.21). -->
+  <!-- half track -->
   <xacro:property name="wheel_track_half_y" value="0.275"/>
 
   <link name="base_footprint"/>
@@ -36,7 +36,6 @@
   </link>
 
   <gazebo reference="base_link">
-    <material>Gazebo/DarkGrey</material>
     <mu1>0.8</mu1>
     <mu2>0.8</mu2>
   </gazebo>
@@ -55,10 +54,6 @@
     </collision>
     <xacro:inertia_box m="1.324" lx="0.732" ly="0.488" lz="0.244"/>
   </link>
-
-  <gazebo reference="top_shell_link">
-    <material>Gazebo/DarkGrey</material>
-  </gazebo>
 
   <joint name="base_top_joint" type="fixed">
     <parent link="base_link"/>
@@ -81,7 +76,7 @@
           <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
         </geometry>
       </collision>
-      <xacro:inertia_cylinder m="${wheel_mass}" r="${wheel_radius}" l="${wheel_width}"/>
+      <xacro:inertia_cylinder_y_at m="${wheel_mass}" r="${wheel_radius}" l="${wheel_width}" ox="0" oy="0" oz="0"/>
     </link>
 
     <joint name="wheel_${name}_joint" type="continuous">
@@ -93,7 +88,6 @@
     </joint>
 
     <gazebo reference="wheel_${name}">
-      <material>Gazebo/Black</material>
       <mu1>1.2</mu1>
       <mu2>1.2</mu2>
       <kp>1e6</kp>

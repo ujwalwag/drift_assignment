@@ -5,21 +5,22 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# 1. Find dependencies
+# deps
 find_package(ament_cmake REQUIRED)
 find_package(ros_gz_sim REQUIRED)
 find_package(ros_gz_bridge REQUIRED)
 find_package(rclcpp REQUIRED)
 
-# 2. Install directories (Ensure these folders actually exist in your src/driftbot_gazebo/!)
+# share
 install(DIRECTORY
   launch
   worlds
   models
+  rviz
   DESTINATION share/${PROJECT_NAME}
 )
 
-# 3. Export dependencies (Crucial for ROS 2)
+# export
 ament_export_dependencies(ros_gz_sim ros_gz_bridge rclcpp)
 
 if(BUILD_TESTING)

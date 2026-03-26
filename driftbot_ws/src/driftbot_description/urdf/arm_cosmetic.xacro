@@ -44,7 +44,7 @@
       <origin xyz="0 0 -0.09" rpy="0 0 0"/>
       <geometry><cylinder radius="0.025" length="0.18"/></geometry>
     </collision>
-    <xacro:inertia_cylinder m="0.30" r="0.025" l="0.18"/>
+    <xacro:inertia_cylinder_z_at m="0.30" r="0.025" l="0.18" ox="0" oy="0" oz="-0.09"/>
   </link>
 
 
@@ -59,7 +59,7 @@
       <origin xyz="0 0 -0.08" rpy="0 0 0"/>
       <geometry><cylinder radius="0.022" length="0.16"/></geometry>
     </collision>
-    <xacro:inertia_cylinder m="0.20" r="0.022" l="0.16"/>
+    <xacro:inertia_cylinder_z_at m="0.20" r="0.022" l="0.16" ox="0" oy="0" oz="-0.08"/>
   </link>
 
 
@@ -83,20 +83,16 @@
   </joint>
 
   <gazebo reference="cosm_shoulder_cap_link">
-  <material>Gazebo/DarkGrey</material>
-  <gravity>false</gravity>
-</gazebo>
+    <turnGravityOff>true</turnGravityOff>
+  </gazebo>
   <gazebo reference="cosm_upper_arm_link">
-  <material>Gazebo/Grey</material>
-  <gravity>false</gravity>
-</gazebo>
+    <turnGravityOff>true</turnGravityOff>
+  </gazebo>
   <gazebo reference="cosm_forearm_link">
-  <material>Gazebo/Grey</material>
-  <gravity>false</gravity>
-</gazebo>
+    <turnGravityOff>true</turnGravityOff>
+  </gazebo>
   <gazebo reference="cosm_end_link">
-  <material>Gazebo/DarkGrey</material>
-  <gravity>false</gravity>
-</gazebo>
+    <turnGravityOff>true</turnGravityOff>
+  </gazebo>
 
 </robot>

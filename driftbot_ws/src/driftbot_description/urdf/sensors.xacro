@@ -10,7 +10,7 @@
     <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
     <geometry><cylinder radius="0.020" length="0.040"/></geometry>
   </collision>
-  <xacro:inertia_cylinder m="0.08" r="0.020" l="0.040"/>
+  <xacro:inertia_cylinder_y_at m="0.08" r="0.020" l="0.040" ox="0" oy="0" oz="0"/>
 </link>
 
   <link name="camera_optical_link"/>
@@ -18,7 +18,7 @@
   <joint name="camera_joint" type="fixed">
     <parent link="torso_link"/>
     <child  link="camera_link"/>
-    <origin xyz="0.095 0.0 0.08" rpy="0 0 0"/>
+    <origin xyz="0.095 0.0 -0.08" rpy="0 0 0"/>
   </joint>
 
   <joint name="camera_optical_joint" type="fixed">
@@ -28,13 +28,14 @@
   </joint>
 
   <gazebo reference="camera_link">
-    <material>Gazebo/Black</material>
     <sensor name="driftbot_camera" type="camera">
       <always_on>true</always_on>
       <update_rate>30</update_rate>
       <visualize>true</visualize>
       <topic>/camera/image_raw</topic>
       <camera>
+        <!-- ogre mask -->
+        <visibility_mask>268435455</visibility_mask>
         <horizontal_fov>1.047</horizontal_fov>
         <image>
           <width>640</width>
@@ -68,14 +69,15 @@
   <origin xyz="0.239 0.0 0.24" rpy="0 0 0"/>
 </joint>
 
+  <!-- 2d scan -->
   <gazebo reference="lidar_link">
-    <material>Gazebo/Black</material>
     <sensor name="driftbot_lidar" type="gpu_lidar">
       <always_on>true</always_on>
       <update_rate>10</update_rate>
       <visualize>true</visualize>
       <topic>/scan</topic>
       <lidar>
+        <visibility_mask>268435455</visibility_mask>
         <scan>
           <horizontal>
             <samples>360</samples>
@@ -89,11 +91,6 @@
           <max>8.0</max>
           <resolution>0.01</resolution>
         </range>
-        <noise>
-          <type>gaussian</type>
-          <mean>0.0</mean>
-          <stddev>0.005</stddev>
-        </noise>
       </lidar>
     </sensor>
   </gazebo>

@@ -35,7 +35,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry><box size="${face_lx} ${face_ly} ${face_lz}"/></geometry>
-      <material name="cyan"/>
+      <material name="grey"/>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0"/>
@@ -49,13 +49,17 @@
   <child  link="face_panel_link"/>
   <origin xyz="${torso_lx/2.0 + face_lx/2.0} 0.0 0.24" rpy="0 0 0"/>
 </joint>
-<!-- "<"> glyph -->
+<!-- xml escape -->
 <link name="glyph_lt_top_link">
   <visual>
     <origin xyz="0 0 0" rpy="0 0 0"/>
     <geometry><box size="0.003 0.032 0.006"/></geometry>
     <material name="burgundy"/>
   </visual>
+  <collision>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry><box size="0.003 0.032 0.006"/></geometry>
+  </collision>
   <xacro:inertia_box m="0.0015" lx="0.003" ly="0.032" lz="0.006"/>
 </link>
 <joint name="glyph_lt_top_joint" type="fixed">
@@ -70,6 +74,10 @@
     <geometry><box size="0.003 0.032 0.006"/></geometry>
     <material name="burgundy"/>
   </visual>
+  <collision>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry><box size="0.003 0.032 0.006"/></geometry>
+  </collision>
   <xacro:inertia_box m="0.0015" lx="0.003" ly="0.032" lz="0.006"/>
 </link>
 <joint name="glyph_lt_bottom_joint" type="fixed">
@@ -84,6 +92,10 @@
     <geometry><box size="0.003 0.008 0.028"/></geometry>
     <material name="burgundy"/>
   </visual>
+  <collision>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry><box size="0.003 0.008 0.028"/></geometry>
+  </collision>
   <xacro:inertia_box m="0.0015" lx="0.003" ly="0.008" lz="0.028"/>
 </link>
 <joint name="glyph_quote_left_joint" type="fixed">
@@ -98,6 +110,10 @@
     <geometry><box size="0.003 0.008 0.028"/></geometry>
     <material name="burgundy"/>
   </visual>
+  <collision>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry><box size="0.003 0.008 0.028"/></geometry>
+  </collision>
   <xacro:inertia_box m="0.0015" lx="0.003" ly="0.008" lz="0.028"/>
 </link>
 <joint name="glyph_quote_right_joint" type="fixed">
@@ -112,6 +128,10 @@
     <geometry><box size="0.003 0.032 0.006"/></geometry>
     <material name="burgundy"/>
   </visual>
+  <collision>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry><box size="0.003 0.032 0.006"/></geometry>
+  </collision>
   <xacro:inertia_box m="0.0015" lx="0.003" ly="0.032" lz="0.006"/>
 </link>
 <joint name="glyph_gt_top_joint" type="fixed">
@@ -126,6 +146,10 @@
     <geometry><box size="0.003 0.032 0.006"/></geometry>
       <material name="burgundy"/>
   </visual>
+  <collision>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry><box size="0.003 0.032 0.006"/></geometry>
+  </collision>
   <xacro:inertia_box m="0.0015" lx="0.003" ly="0.032" lz="0.006"/>
 </link>
 <joint name="glyph_gt_bottom_joint" type="fixed">
@@ -133,14 +157,5 @@
   <child  link="glyph_gt_bottom_link"/>
   <origin xyz="0.010 -0.060 -0.016" rpy="-0.95 0 0"/>
 </joint>
-
-  <gazebo reference="torso_link"/>
-<gazebo reference="face_panel_link"><material>Gazebo/Grey</material></gazebo>
-<gazebo reference="glyph_lt_top_link"/>
-<gazebo reference="glyph_lt_bottom_link"/>
-<gazebo reference="glyph_quote_left_link"/>
-<gazebo reference="glyph_quote_right_link"/>
-<gazebo reference="glyph_gt_top_link"/>
-<gazebo reference="glyph_gt_bottom_link"/>
 
 </robot>

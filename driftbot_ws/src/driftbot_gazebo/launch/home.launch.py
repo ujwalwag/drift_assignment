@@ -1,11 +1,4 @@
-"""Launch the driftbot home world with the robot spawned inside it.
-
-Usage:
-  ros2 launch driftbot_gazebo home.launch.py
-
-If the Gazebo window is blank, try:
-  LIBGL_ALWAYS_SOFTWARE=1 ros2 launch driftbot_gazebo home.launch.py
-"""
+"""Gazebo home + spawn. Tidying: driftbot_task tidying.launch.py."""
 import os
 
 from ament_index_python.packages import get_package_share_directory
@@ -18,6 +11,7 @@ from launch.actions import (
     SetEnvironmentVariable,
     TimerAction,
 )
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, LaunchConfiguration
 from launch_ros.actions import Node
@@ -35,32 +29,60 @@ def generate_launch_description():
         get_package_share_directory("ros_gz_sim"), "launch", "gz_sim.launch.py"
     )
 
+    # models path first
+    if models_path:
+        prev = os.environ.get("GZ_SIM_RESOURCE_PATH", "")
+        tail = [p for p in prev.split(os.pathsep) if p and os.path.normpath(p) != os.path.normpath(models_path)]
+        os.environ["GZ_SIM_RESOURCE_PATH"] = models_path if not tail else models_path + os.pathsep + os.pathsep.join(tail)
+
     robot_description = ParameterValue(Command(["xacro ", xacro_file]), value_type=str)
 
     return LaunchDescription([
-        # Make Gazebo find our custom models via model:// URIs
-        AppendEnvironmentVariable(name="GZ_SIM_RESOURCE_PATH", value=models_path),
+        AppendEnvironmentVariable(
+            name="GZ_SIM_RESOURCE_PATH",
+            value=models_path,
+            prepend=True,
+        ),
 
-        # WSL2: WAYLAND_DISPLAY + DISPLAY are both set. Qt defaults to Wayland,
-        # but Ogre1 creates a GLX context on X11. Force xcb so both use X11
-        # (via XWayland), eliminating the blank 3-D viewport.
-        SetEnvironmentVariable(name="QT_QPA_PLATFORM",            value="xcb"),
-        # Force Mesa software rasteriser (swrast / llvmpipe) so Ogre1 renders
-        # without /dev/dxg GPU passthrough.
-        SetEnvironmentVariable(name="LIBGL_ALWAYS_SOFTWARE",      value="1"),
-        SetEnvironmentVariable(name="MESA_GL_VERSION_OVERRIDE",   value="3.3"),
-        SetEnvironmentVariable(name="MESA_GLSL_VERSION_OVERRIDE", value="330"),
+        SetEnvironmentVariable(name="QT_QPA_PLATFORM", value="xcb"),
 
         DeclareLaunchArgument(
             "spawn_z", default_value="0.01",
-            description="Robot spawn z-height in metres.",
+            description="spawn z m",
+        ),
+        DeclareLaunchArgument(
+            "software_gl",
+            default_value="false",
+            description="mesa gl",
         ),
 
-        # --render-engine ogre uses Ogre1 which works on WSL2 without GPU passthrough.
-        # Ogre2 (default) requires GPU passthrough (/dev/dxg) which this system lacks.
+        # ogre2 lidar
+        SetEnvironmentVariable(
+            name="LIBGL_ALWAYS_SOFTWARE",
+            value="1",
+            condition=IfCondition(LaunchConfiguration("software_gl")),
+        ),
+        SetEnvironmentVariable(
+            name="MESA_GL_VERSION_OVERRIDE",
+            value="3.3",
+            condition=IfCondition(LaunchConfiguration("software_gl")),
+        ),
+        SetEnvironmentVariable(
+            name="MESA_GLSL_VERSION_OVERRIDE",
+            value="330",
+            condition=IfCondition(LaunchConfiguration("software_gl")),
+        ),
+
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(gz_launch),
-            launch_arguments={"gz_args": f"-r -v 2 {world_file} --render-engine ogre"}.items(),
+            launch_arguments={
+                "gz_args": (
+                    f"-r -v 2 {world_file} "
+                    "--render-engine ogre2 "
+                    "--render-engine-gui ogre2 "
+                    "--render-engine-server ogre2"
+                ),
+            }.items(),
         ),
 
         Node(
@@ -85,10 +107,6 @@ def generate_launch_description():
             output="screen",
         ),
 
-        # detach_on_start in the URDF is ignored by gz-sim 8.10.0 — the
-        # DetachableJoint plugin attaches all objects at startup. Publishing to
-        # /magnet_off via the TriggeredPublisher releases all 6 at once.
-        # 5 s gives Gazebo and the robot-spawn node enough time to initialise.
         TimerAction(
             period=5.0,
             actions=[

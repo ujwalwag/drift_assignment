@@ -1,0 +1,481 @@
+Panels:
+  - Class: rviz_common/Displays
+    Help Height: 70
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /Global Options1
+        - /Status1
+        - /RobotModel1
+        - /RobotModel1/Links1
+        - /RobotModel1/Links1/arm_base_link1
+        - /RobotModel1/Links1/base_footprint1
+        - /RobotModel1/Links1/base_link1
+        - /RobotModel1/Links1/camera_link1
+        - /RobotModel1/Links1/camera_optical_link1
+        - /RobotModel1/Links1/cosm_end_link1
+        - /RobotModel1/Links1/cosm_forearm_link1
+        - /RobotModel1/Links1/cosm_shoulder_cap_link1
+        - /RobotModel1/Links1/cosm_upper_arm_link1
+        - /RobotModel1/Links1/cosm_upper_arm_link1/Position1
+        - /RobotModel1/Links1/cosm_upper_arm_link1/Orientation1
+        - /RobotModel1/Links1/face_panel_link1
+        - /RobotModel1/Links1/face_panel_link1/Position1
+        - /RobotModel1/Links1/forearm_link1
+        - /RobotModel1/Links1/glyph_gt_bottom_link1
+        - /RobotModel1/Links1/glyph_gt_top_link1
+        - /RobotModel1/Links1/glyph_lt_bottom_link1
+        - /RobotModel1/Links1/glyph_lt_top_link1
+        - /RobotModel1/Links1/glyph_quote_left_link1
+        - /RobotModel1/Links1/glyph_quote_right_link1
+        - /RobotModel1/Links1/gripper_link1
+        - /RobotModel1/Links1/lidar_link1
+        - /RobotModel1/Links1/magnet_zone_link1
+        - /RobotModel1/Links1/top_shell_link1
+        - /RobotModel1/Links1/torso_link1
+        - /RobotModel1/Links1/upper_arm_link1
+        - /RobotModel1/Links1/wheel_fl1
+        - /RobotModel1/Links1/wheel_fr1
+        - /RobotModel1/Links1/wheel_rl1
+        - /RobotModel1/Links1/wheel_rr1
+        - /RobotModel1/Links1/wrist_link1
+      Splitter Ratio: 0.5
+    Tree Height: 413
+  - Class: rviz_common/Views
+    Expanded:
+      - /Current View1
+    Name: Views
+    Splitter Ratio: 0.5
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 1
+      Class: rviz_default_plugins/RobotModel
+      Collision Enabled: false
+      Description File: ""
+      Description Source: Topic
+      Description Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robot_description
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: true
+        Expand Link Details: true
+        Expand Tree: true
+        Link Tree Style: Links in Alphabetic Order
+        arm_base_link:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+        base_footprint:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+        base_link:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+        camera_link:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+        camera_optical_link:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+        cosm_end_link:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+        cosm_forearm_link:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+        cosm_shoulder_cap_link:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+        cosm_upper_arm_link:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+        face_panel_link:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+        forearm_link:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+        glyph_gt_bottom_link:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+        glyph_gt_top_link:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+        glyph_lt_bottom_link:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+        glyph_lt_top_link:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+        glyph_quote_left_link:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+        glyph_quote_right_link:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+        gripper_link:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+        lidar_link:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+        magnet_zone_link:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+        top_shell_link:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+        torso_link:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+        upper_arm_link:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+        wheel_fl:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+        wheel_fr:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+        wheel_rl:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+        wheel_rr:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+        wrist_link:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: true
+          Value: true
+      Mass Properties:
+        Inertia: false
+        Mass: false
+      Name: RobotModel
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Class: rviz_default_plugins/TF
+      Enabled: false
+      Filter (blacklist): ""
+      Filter (whitelist): ""
+      Frame Timeout: 15
+      Frames:
+        All Enabled: true
+      Marker Scale: 1
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Tree:
+        {}
+      Update Interval: 0
+      Value: false
+    - Alpha: 1
+      Class: rviz_default_plugins/Effort
+      Enabled: true
+      History Length: 1
+      Joints:
+        elbow_joint:
+          Value: true
+        shoulder_joint:
+          Value: true
+        wrist_joint:
+          Value: true
+      Name: Effort
+      Robot Description: /robot_description
+      Scale: 1
+      TF Prefix: ""
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /joint_states
+      Value: true
+      Width: 0.019999999552965164
+  Enabled: true
+  Global Options:
+    Background Color: 48; 48; 48
+    Fixed Frame: base_footprint
+    Frame Rate: 30
+  Name: root
+  Tools: ~
+  Transformation:
+    Current:
+      Class: rviz_default_plugins/TF
+  Value: true
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 10
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.05999999865889549
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: true
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05000000074505806
+      Invert Z Axis: false
+      Name: Current View
+      Near Clip Distance: 0.009999999776482582
+      Pitch: 0.7853981852531433
+      Target Frame: <Fixed Frame>
+      Value: Orbit (rviz_default_plugins)
+      Yaw: 0.7853981852531433
+    Saved:
+      - Class: rviz_default_plugins/Orbit
+        Distance: 10
+        Enable Stereo Rendering:
+          Stereo Eye Separation: 0.05999999865889549
+          Stereo Focal Distance: 1
+          Swap Stereo Eyes: false
+          Value: true
+        Focal Point:
+          X: 0
+          Y: 0
+          Z: 0
+        Focal Shape Fixed Size: true
+        Focal Shape Size: 0.05000000074505806
+        Invert Z Axis: false
+        Name: Orbit
+        Near Clip Distance: 0.009999999776482582
+        Pitch: 0.7853981852531433
+        Target Frame: <Fixed Frame>
+        Value: Orbit (rviz_default_plugins)
+        Yaw: 0.7853981852531433
+      - Class: rviz_default_plugins/Orbit
+        Distance: 10
+        Enable Stereo Rendering:
+          Stereo Eye Separation: 0.05999999865889549
+          Stereo Focal Distance: 1
+          Swap Stereo Eyes: false
+          Value: true
+        Focal Point:
+          X: 0
+          Y: 0
+          Z: 0
+        Focal Shape Fixed Size: true
+        Focal Shape Size: 0.05000000074505806
+        Invert Z Axis: false
+        Name: Orbit
+        Near Clip Distance: 0.009999999776482582
+        Pitch: 0.7853981852531433
+        Target Frame: <Fixed Frame>
+        Value: Orbit (rviz_default_plugins)
+        Yaw: 0.7853981852531433
+      - Class: rviz_default_plugins/Orbit
+        Distance: 10
+        Enable Stereo Rendering:
+          Stereo Eye Separation: 0.05999999865889549
+          Stereo Focal Distance: 1
+          Swap Stereo Eyes: false
+          Value: true
+        Focal Point:
+          X: 0
+          Y: 0
+          Z: 0
+        Focal Shape Fixed Size: true
+        Focal Shape Size: 0.05000000074505806
+        Invert Z Axis: false
+        Name: Orbit
+        Near Clip Distance: 0.009999999776482582
+        Pitch: 0.7853981852531433
+        Target Frame: <Fixed Frame>
+        Value: Orbit (rviz_default_plugins)
+        Yaw: 0.7853981852531433
+      - Class: rviz_default_plugins/Orbit
+        Distance: 10
+        Enable Stereo Rendering:
+          Stereo Eye Separation: 0.05999999865889549
+          Stereo Focal Distance: 1
+          Swap Stereo Eyes: false
+          Value: true
+        Focal Point:
+          X: 0
+          Y: 0
+          Z: 0
+        Focal Shape Fixed Size: true
+        Focal Shape Size: 0.05000000074505806
+        Invert Z Axis: false
+        Name: Orbit
+        Near Clip Distance: 0.009999999776482582
+        Pitch: 0.7853981852531433
+        Target Frame: <Fixed Frame>
+        Value: Orbit (rviz_default_plugins)
+        Yaw: 0.7853981852531433
+      - Class: rviz_default_plugins/Orbit
+        Distance: 10
+        Enable Stereo Rendering:
+          Stereo Eye Separation: 0.05999999865889549
+          Stereo Focal Distance: 1
+          Swap Stereo Eyes: false
+          Value: true
+        Focal Point:
+          X: 0
+          Y: 0
+          Z: 0
+        Focal Shape Fixed Size: true
+        Focal Shape Size: 0.05000000074505806
+        Invert Z Axis: false
+        Name: Orbit
+        Near Clip Distance: 0.009999999776482582
+        Pitch: 0.7853981852531433
+        Target Frame: <Fixed Frame>
+        Value: Orbit (rviz_default_plugins)
+        Yaw: 0.7853981852531433
+      - Class: rviz_default_plugins/Orbit
+        Distance: 10
+        Enable Stereo Rendering:
+          Stereo Eye Separation: 0.05999999865889549
+          Stereo Focal Distance: 1
+          Swap Stereo Eyes: false
+          Value: true
+        Focal Point:
+          X: 0
+          Y: 0
+          Z: 0
+        Focal Shape Fixed Size: true
+        Focal Shape Size: 0.05000000074505806
+        Invert Z Axis: false
+        Name: Orbit
+        Near Clip Distance: 0.009999999776482582
+        Pitch: 0.7853981852531433
+        Target Frame: <Fixed Frame>
+        Value: Orbit (rviz_default_plugins)
+        Yaw: 0.7853981852531433
+      - Class: rviz_default_plugins/Orbit
+        Distance: 10
+        Enable Stereo Rendering:
+          Stereo Eye Separation: 0.05999999865889549
+          Stereo Focal Distance: 1
+          Swap Stereo Eyes: false
+          Value: true
+        Focal Point:
+          X: 0
+          Y: 0
+          Z: 0
+        Focal Shape Fixed Size: true
+        Focal Shape Size: 0.05000000074505806
+        Invert Z Axis: false
+        Name: Orbit
+        Near Clip Distance: 0.009999999776482582
+        Pitch: 0.7853981852531433
+        Target Frame: <Fixed Frame>
+        Value: Orbit (rviz_default_plugins)
+        Yaw: 0.7853981852531433
+      - Class: rviz_default_plugins/Orbit
+        Distance: 10
+        Enable Stereo Rendering:
+          Stereo Eye Separation: 0.05999999865889549
+          Stereo Focal Distance: 1
+          Swap Stereo Eyes: false
+          Value: true
+        Focal Point:
+          X: 0
+          Y: 0
+          Z: 0
+        Focal Shape Fixed Size: true
+        Focal Shape Size: 0.05000000074505806
+        Invert Z Axis: false
+        Name: Orbit
+        Near Clip Distance: 0.009999999776482582
+        Pitch: 0.7853981852531433
+        Target Frame: <Fixed Frame>
+        Value: Orbit (rviz_default_plugins)
+        Yaw: 0.7853981852531433
+      - Class: rviz_default_plugins/Orbit
+        Distance: 10
+        Enable Stereo Rendering:
+          Stereo Eye Separation: 0.05999999865889549
+          Stereo Focal Distance: 1
+          Swap Stereo Eyes: false
+          Value: true
+        Focal Point:
+          X: 0
+          Y: 0
+          Z: 0
+        Focal Shape Fixed Size: true
+        Focal Shape Size: 0.05000000074505806
+        Invert Z Axis: false
+        Name: Orbit
+        Near Clip Distance: 0.009999999776482582
+        Pitch: 0.7853981852531433
+        Target Frame: <Fixed Frame>
+        Value: Orbit (rviz_default_plugins)
+        Yaw: 0.7853981852531433
+Window Geometry:
+  Displays:
+    collapsed: false
+  Height: 813
+  Hide Left Dock: false
+  Hide Right Dock: false
+  QMainWindow State: 000000ff00000000fd00000001000000000000019b000002d7fc0200000002fb000000100044006900730070006c006100790073010000003b0000021e000000c700fffffffb0000000a00560069006500770073010000025f000000b3000000a000ffffff0000011b000002d700000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  Views:
+    collapsed: false
+  Width: 700
+  X: 3039
+  Y: 57

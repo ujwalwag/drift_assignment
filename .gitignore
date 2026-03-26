@@ -1,32 +1,33 @@
-# Colcon build artifacts
+# colcon
 build/
 install/
 log/
 ~/colcon_logs/
 
-# Python cache
+# python
+.pytest_cache/
 __pycache__/
 *.pyc
 *.pyo
 
-# VSCode
+# vscode
 .vscode/
 
-# Cursor
+# cursor
 .cursor/
 .cursorignore
 .cursorules
 *.cursor-tutor
 
-# ROS logs
+# ros log
 ~/.ros/log/
 
-# Generated URDF (always generate from xacro, never commit the output)
+# xacro out
 *.urdf
 
-# Gazebo cache
+# gz cache
 ~/.gazebo/
 
-# OS
+# os junk
 .DS_Store
 Thumbs.db

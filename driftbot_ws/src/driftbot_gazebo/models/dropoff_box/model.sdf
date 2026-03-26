@@ -14,9 +14,11 @@
             <izz>0.1033038684</izz>
           </inertia>
         </inertial>
+        <!-- mesh aabb -->
         <collision name="collision">
+          <pose>0 0 0.155 0 0 0</pose>
           <geometry>
-            <box><size>0.6 0.6 0.4</size></box></geometry>
+            <box><size>0.68 0.90 0.31</size></box></geometry>
           <surface>
             <friction>
               <ode>
@@ -35,7 +37,7 @@
               </ode>
             </contact>
           </surface>
-        <pose>0 0 0.2000 0 0 0</pose></collision>
+        </collision>
         <visual name="visual">
           <geometry>
             <mesh>

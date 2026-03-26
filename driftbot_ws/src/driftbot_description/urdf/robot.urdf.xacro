@@ -17,9 +17,9 @@
       <left_joint>wheel_rl_joint</left_joint>
       <right_joint>wheel_fr_joint</right_joint>
       <right_joint>wheel_rr_joint</right_joint>
-      <!-- Track width: 2 * wheel_track_half_y (base.xacro). -->
+      <!-- track width -->
       <wheel_separation>0.55</wheel_separation>
-      <wheel_radius>0.10</wheel_radius>
+      <wheel_radius>0.165</wheel_radius>
       <max_linear_velocity>0.8</max_linear_velocity>
       <max_angular_velocity>1.5</max_angular_velocity>
       <max_linear_acceleration>1.0</max_linear_acceleration>
@@ -27,6 +27,7 @@
       <odom_publish_frequency>30</odom_publish_frequency>
       <topic>cmd_vel</topic>
       <odom_topic>odom</odom_topic>
+      <!-- no gz /tf -->
       <tf_topic>tf</tf_topic>
       <frame_id>odom</frame_id>
       <child_frame_id>base_link</child_frame_id>
@@ -40,33 +41,54 @@
     </plugin>
   </gazebo>
 
+  <!-- arm topics -->
   <gazebo>
-    <plugin filename="gz-sim-sensors-system"
-            name="gz::sim::systems::Sensors">
-      <render_engine>ogre2</render_engine>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>shoulder_joint</joint_name>
+      <topic>arm_cmd_shoulder</topic>
+      <p_gain>50</p_gain>
+      <i_gain>0.02</i_gain>
+      <d_gain>0.35</d_gain>
+      <cmd_max>80</cmd_max>
+      <cmd_min>-80</cmd_min>
+    </plugin>
+  </gazebo>
+  <gazebo>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>elbow_joint</joint_name>
+      <topic>arm_cmd_elbow</topic>
+      <p_gain>50</p_gain>
+      <i_gain>0.02</i_gain>
+      <d_gain>0.35</d_gain>
+      <cmd_max>80</cmd_max>
+      <cmd_min>-80</cmd_min>
+    </plugin>
+  </gazebo>
+  <gazebo>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>wrist_joint</joint_name>
+      <topic>arm_cmd_wrist</topic>
+      <p_gain>40</p_gain>
+      <i_gain>0.02</i_gain>
+      <d_gain>0.25</d_gain>
+      <cmd_max>60</cmd_max>
+      <cmd_min>-60</cmd_min>
     </plugin>
   </gazebo>
 
-  <!-- Contact system is required by TouchPlugin and contact sensors. -->
+  <!-- lidar world plugin -->
+
+  <!-- contacts -->
   <gazebo>
     <plugin filename="gz-sim-contact-system"
-            name="gz::sim::systems::Contact"/>
+            name="gz::sim::systems::Contact">
+    </plugin>
   </gazebo>
 
-  <!-- Magnetic pickup behavior for floor objects.
-       Targets in home.sdf:
-         - can
-         - ball
-         - toy_block_1
-         - toy_block_2
-         - toy_cylinder_1
-         - toy_block_3
-       All targets use child_link=link.
-
-       Control topics (Gazebo transport):
-         - /magnet_on  (gz.msgs.Empty): attach targets
-         - /magnet_off (gz.msgs.Empty): detach targets
-  -->
+  <!-- pick attach -->
   <gazebo>
     <plugin filename="gz-sim-detachable-joint-system"
             name="gz::sim::systems::DetachableJoint">
@@ -121,37 +143,6 @@
       <attach_topic>/toy_block_3/attach</attach_topic>
       <detach_topic>/toy_block_3/detach</detach_topic>
       <detach_on_start>true</detach_on_start>
-    </plugin>
-
-    <plugin filename="gz-sim-triggered-publisher-system"
-            name="gz::sim::systems::TriggeredPublisher">
-      <input type="gz.msgs.Empty" topic="/magnet_on"/>
-      <output type="gz.msgs.Empty" topic="/can/attach"/>
-    </plugin>
-    <plugin filename="gz-sim-triggered-publisher-system"
-            name="gz::sim::systems::TriggeredPublisher">
-      <input type="gz.msgs.Empty" topic="/magnet_on"/>
-      <output type="gz.msgs.Empty" topic="/ball/attach"/>
-    </plugin>
-    <plugin filename="gz-sim-triggered-publisher-system"
-            name="gz::sim::systems::TriggeredPublisher">
-      <input type="gz.msgs.Empty" topic="/magnet_on"/>
-      <output type="gz.msgs.Empty" topic="/toy_block_1/attach"/>
-    </plugin>
-    <plugin filename="gz-sim-triggered-publisher-system"
-            name="gz::sim::systems::TriggeredPublisher">
-      <input type="gz.msgs.Empty" topic="/magnet_on"/>
-      <output type="gz.msgs.Empty" topic="/toy_block_2/attach"/>
-    </plugin>
-    <plugin filename="gz-sim-triggered-publisher-system"
-            name="gz::sim::systems::TriggeredPublisher">
-      <input type="gz.msgs.Empty" topic="/magnet_on"/>
-      <output type="gz.msgs.Empty" topic="/toy_cylinder_1/attach"/>
-    </plugin>
-    <plugin filename="gz-sim-triggered-publisher-system"
-            name="gz::sim::systems::TriggeredPublisher">
-      <input type="gz.msgs.Empty" topic="/magnet_on"/>
-      <output type="gz.msgs.Empty" topic="/toy_block_3/attach"/>
     </plugin>
 
     <plugin filename="gz-sim-triggered-publisher-system"

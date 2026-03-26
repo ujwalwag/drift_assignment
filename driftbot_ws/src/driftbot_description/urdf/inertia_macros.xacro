@@ -13,8 +13,10 @@
     </inertial>
   </xacro:macro>
 
-  <xacro:macro name="inertia_cylinder" params="m r l">
+  <!-- cyl +Z -->
+  <xacro:macro name="inertia_cylinder_z_at" params="m r l ox oy oz">
     <inertial>
+      <origin xyz="${ox} ${oy} ${oz}" rpy="0 0 0"/>
       <mass value="${m}"/>
       <inertia
         ixx="${(1.0/12.0)*m*(3*r*r + l*l)}"
@@ -23,6 +25,38 @@
         iyz="0"
         izz="${0.5*m*r*r}"/>
     </inertial>
+  </xacro:macro>
+
+  <!-- cyl +X -->
+  <xacro:macro name="inertia_cylinder_x_at" params="m r l ox oy oz">
+    <inertial>
+      <origin xyz="${ox} ${oy} ${oz}" rpy="0 0 0"/>
+      <mass value="${m}"/>
+      <inertia
+        ixx="${0.5*m*r*r}"
+        ixy="0" ixz="0"
+        iyy="${(1.0/12.0)*m*(3*r*r + l*l)}"
+        iyz="0"
+        izz="${(1.0/12.0)*m*(3*r*r + l*l)}"/>
+    </inertial>
+  </xacro:macro>
+
+  <!-- cyl +Y -->
+  <xacro:macro name="inertia_cylinder_y_at" params="m r l ox oy oz">
+    <inertial>
+      <origin xyz="${ox} ${oy} ${oz}" rpy="0 0 0"/>
+      <mass value="${m}"/>
+      <inertia
+        ixx="${(1.0/12.0)*m*(3*r*r + l*l)}"
+        ixy="0" ixz="0"
+        iyy="${0.5*m*r*r}"
+        iyz="0"
+        izz="${(1.0/12.0)*m*(3*r*r + l*l)}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="inertia_cylinder" params="m r l">
+    <xacro:inertia_cylinder_z_at m="${m}" r="${r}" l="${l}" ox="0" oy="0" oz="0"/>
   </xacro:macro>
 
   <xacro:macro name="inertia_sphere" params="m r">

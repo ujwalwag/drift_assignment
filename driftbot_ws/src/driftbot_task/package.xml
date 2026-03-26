@@ -3,18 +3,31 @@
 <package format="3">
   <name>driftbot_task</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Autonomous tidying: Gazebo bridges, waypoint driving, magnet pick/drop, telemetry.</description>
   <maintainer email="ujwalwag@todo.todo">ujwalwag</maintainer>
   <license>Apache-2.0</license>
 
   <depend>rclpy</depend>
-  <depend>nav2_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>geometry_msgs</depend>
-  <depend>tf2_ros</depend>
   <depend>nav_msgs</depend>
-  <depend>action_msgs</depend>
   <depend>std_msgs</depend>
+  <depend>visualization_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_geometry_msgs</depend>
+
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>image_view</exec_depend>
+
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>ros_gz_bridge</exec_depend>
+  <exec_depend>ros_gz_sim</exec_depend>
+  <exec_depend>driftbot_gazebo</exec_depend>
+  <exec_depend>driftbot_description</exec_depend>
+  <exec_depend>rviz2</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
