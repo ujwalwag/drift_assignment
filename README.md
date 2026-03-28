@@ -119,4 +119,4 @@ Robot spawns at `(7.5, 9.0)` facing south (`yaw = -π/2`).
 - Rover STL meshes and URDF adapted from [GGomezMorales/waver](https://github.com/GGomezMorales/waver/tree/humble)
 - Arm URDF and meshes adapted from [AL5D description](https://github.com/Daniella1/urdf_files_dataset/tree/main/urdf_files/robotics-toolbox/al5d_description)
 - Furniture models sourced/adapted from [Gazebo Fuel](https://app.gazebosim.org/fuel/models), [osrf/gazebo_models](https://github.com/osrf/gazebo_models), and [ipa320/cob_simulation](https://github.com/ipa320/cob_simulation)
--Rover STL files 
+
