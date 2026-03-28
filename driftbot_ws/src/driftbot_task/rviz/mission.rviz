@@ -29,22 +29,6 @@ Visualization Manager:
       Show Arrows: true
       Show Axes: false
       Show Names: false
-    - Alpha: 0.75
-      Binary representation: false
-      Binary threshold: 99
-      Class: rviz_default_plugins/Map
-      Color Scheme: costmap
-      Draw Behind: false
-      Enabled: true
-      Name: Local costmap
-      Topic:
-        Depth: 5
-        Durability Policy: Transient Local
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /local_costmap
-      Use Timestamp: false
-      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Axis: Z
@@ -66,28 +50,6 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Best Effort
         Value: /scan
-      Use Fixed Frame: true
-      Value: true
-    - Alpha: 1
-      Autocompute Intensity Bounds: true
-      Class: rviz_default_plugins/PointCloud2
-      Color: 80; 255; 120
-      Color Transformer: FlatColor
-      Decay Time: 0
-      Enabled: true
-      Name: LiDAR cloud (odom, green)
-      Position Transformer: XYZ
-      Queue Size: 10
-      Selectable: true
-      Size (Pixels): 3
-      Size (m): 0.05
-      Style: Flat Squares
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /scan_cloud_odom
       Use Fixed Frame: true
       Value: true
     - Class: rviz_default_plugins/Image

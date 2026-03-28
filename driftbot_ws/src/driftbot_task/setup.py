@@ -23,7 +23,7 @@ setup(
     zip_safe=True,
     maintainer='ujwalwag',
     maintainer_email='ujwalwag@todo.todo',
-    description='Tidying sim + task.',
+    description='Scripted Gazebo mission: bridges, TF/joint/scan support, pick/drop.',
     license='Apache-2.0',
     extras_require={
         'test': [
@@ -33,10 +33,7 @@ setup(
     entry_points={
         'console_scripts': [
             'task_node = driftbot_task.task_node:main',
-            'sim_tf_relay = driftbot_task.sim_tf_relay:main',
-            'scan_relay = driftbot_task.scan_pipeline:main_relay',
-            'scan_costmap = driftbot_task.scan_pipeline:main_costmap',
-            'joint_states_snapshot = driftbot_task.joint_states_snapshot:main',
+            'gz_bridge_support = driftbot_task.gz_bridge_support:main',
         ],
     },
 )

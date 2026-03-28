@@ -12,62 +12,58 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tidying waypoint node."""
+"""Scripted Gazebo mission.
+
+Every translation leg: **face goal bearing** (in place), then **drive with ω=0**.
+All ``cmd_vel`` goes through one function so you can flip yaw sign for ROS/GZ.
+
+World pose: Gazebo diff-drive ``/odom`` is in a frame whose +X was **robot
+forward at spawn**. Convert to world with ``spawn_yaw`` (must match
+``home.launch`` / ``ros_gz_sim create -Y``).
+
+In-place spins on the toy leg use **IMU** only (``/imu/data``): diff-drive
+odom integrates yaw too fast for reliable closed-loop turns on the spot.
+"""
 
 from __future__ import annotations
 
-import csv
 import math
 import os
 import subprocess
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 import rclpy
 from rclpy.duration import Duration
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
-from sensor_msgs.msg import Image, LaserScan
-from std_msgs.msg import Float64
-from tf2_ros import Buffer, TransformException, TransformListener
-from visualization_msgs.msg import Marker
+from sensor_msgs.msg import Image, Imu
+from std_msgs.msg import Empty, Float64
 import yaml
 
-
-# spawn / odom zero
-SPAWN_XY = (1.5, 9.0)
-BOX_XY = (8.5, 9.0)
-
-# object centers (sdf)
-_PICKABLE_WORLD_XYZ: Dict[str, Tuple[float, float, float]] = {
-    'toy_block_1': (-5.0, 3.5, 0.05),
-    'toy_block_2': (-2.5, 8.0, 0.045),
-    'toy_block_3': (8.0, 7.0, 0.05),
-    'toy_cylinder_1': (-7.0, 7.0, 0.05),
-    'can': (1.5, 7.5, 0.065),
-    'ball': (6.0, 3.5, 0.05),
+OBJECTS: Dict[str, Tuple[float, float, float]] = {
+    'can': (1.5, 9.0, 0.065),
+    'toy_block_1': (7.5, 5.0, 0.05),
+    'ball': (1.5, 2.0, 0.05),
 }
-
-# magnet reach radii
-_PICKABLE_SURFACE_RADIUS_M: Dict[str, float] = {
-    'ball': 0.05,
-    'can': 0.075,
-    'toy_block_1': 0.065,
-    'toy_block_2': 0.055,
-    'toy_block_3': 0.065,
-    'toy_cylinder_1': 0.065,
+ATTACH_TOPIC = {
+    'can': '/can/attach',
+    'toy_block_1': '/toy_block_1/attach',
+    'ball': '/ball/attach',
 }
+DEFAULT_BOX = (8.5, 9.0)
 
 
-def quat_yaw(qz: float, qw: float) -> float:
-    return math.atan2(2.0 * qz * qw, qw * qw - qz * qz)
+def quat_yaw(x: float, y: float, z: float, w: float) -> float:
+    return math.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
 
 
-def angle_diff(a: float, b: float) -> float:
-    d = a - b
+def angle_diff(target: float, current: float) -> float:
+    d = target - current
     while d > math.pi:
         d -= 2.0 * math.pi
     while d < -math.pi:
@@ -75,36 +71,11 @@ def angle_diff(a: float, b: float) -> float:
     return d
 
 
-def room_label(wx: float, wy: float) -> str:
-    if -10.0 <= wx < 0.0 and 0.0 <= wy <= 10.0:
-        return 'Room1'
-    if 0.0 <= wx <= 10.0 and 0.0 <= wy <= 10.0:
-        return 'Room2'
-    if math.hypot(wx - BOX_XY[0], wy - BOX_XY[1]) < 2.5:
-        return 'Drop_zone'
-    return 'Outside_map'
+def wrap_pi(a: float) -> float:
+    return (a + math.pi) % (2.0 * math.pi) - math.pi
 
 
-# gz attach topics
-_GZ_ATTACH_TOPIC = {
-    'can': '/can/attach',
-    'ball': '/ball/attach',
-    'toy_block_1': '/toy_block_1/attach',
-    'toy_block_2': '/toy_block_2/attach',
-    'toy_block_3': '/toy_block_3/attach',
-    'toy_cylinder_1': '/toy_cylinder_1/attach',
-}
-
-
-def _pick_face_xy_for_model(model: str) -> Optional[Tuple[float, float]]:
-    """Pick target XY."""
-    o = _PICKABLE_WORLD_XYZ.get(model)
-    if o is None:
-        return None
-    return (o[0], o[1])
-
-
-def _gz_publish_empty(topic: str) -> None:
+def gz_empty(topic: str) -> None:
     subprocess.run(
         ['gz', 'topic', '-t', topic, '-m', 'gz.msgs.Empty', '-p', ''],
         capture_output=True,
@@ -113,101 +84,9 @@ def _gz_publish_empty(topic: str) -> None:
     )
 
 
-def gz_detach_all_pickables() -> None:
-    """Magnet off all."""
-    _gz_publish_empty('/magnet_off')
-
-
-def _default_config() -> Dict[str, Any]:
-    return {
-        'motion': {
-            'loop_rate_hz': 20.0,
-            'mission_time_limit_sec': 280.0,
-            'per_waypoint_timeout_sec': 75.0,
-            'pos_tol': 0.28,
-            'v_max': 0.38,
-            'w_max': 1.0,
-            'nav_align_yaw_tol_rad': 0.1,
-            'rotate_to_goal_gain': 2.4,
-            'approach_linear_gain': 0.48,
-            'pick_target_distance_m': 0.01,
-            'pick_approach_v_max': 0.1,
-            'pick_approach_timeout_sec': 35.0,
-            'drop_approach_standoff_m': 0.5,
-        },
-        'progress': {
-            'movement_time_allowance_sec': 12.0,
-            'required_movement_radius': 0.45,
-        },
-        'recovery': {
-            'spin_duration_sec': 1.1,
-            'spin_w': 0.85,
-            'backup_duration_sec': 0.65,
-            'backup_v': -0.14,
-            'wait_after_recovery_sec': 0.35,
-            'min_rear_clearance_for_backup': 0.42,
-        },
-        'obstacle': {
-            'front_stop': 0.38,
-            'front_slow': 0.62,
-            'rear_check_deg': 55.0,
-            # wall follow
-            'wall_follow_enable': True,
-            'wall_follow_trigger_front_m': 0.45,
-            'wall_follow_stuck_before_sec': 3.5,
-            'wall_follow_max_duration_sec': 10.0,
-            'wall_follow_linear_m_s': 0.12,
-            'wall_follow_angular_gain': 2.0,
-            'wall_follow_desired_side_m': 0.38,
-        },
-        'telemetry': {'publish_goal_markers': True},
-        # bin zone
-        'drop_zone': {
-            'center_x': 8.5,
-            'center_y': 9.0,
-            'half_extent_x': 0.442,
-            'half_extent_y': 0.585,
-            'approach_margin_m': 0.35,
-        },
-        'arm': {
-            'settle_drop': 0.9,
-            'pick_magnet_pause': 0.45,
-            'drop_magnet_pause': 0.35,
-            'pick_creep_sec': 0.0,
-            'drop_creep_sec': 0.0,
-            'magnet_attach_radius_m': 0.13,
-            'magnet_reach_slop_m': 0.02,
-            'enforce_magnet_reach': True,
-            # pre-odom hold
-            'wait_stream_arm': True,
-            'wait_arm_hz': 35.0,
-            'wait_stream_pose': {'shoulder': 0.0, 'elbow': 0.0, 'wrist': 0.0},
-            # arm ramp sim
-            'bootstrap_hold_hz': 25.0,
-            'bootstrap_stages': [
-                {'shoulder': -0.00006, 'elbow': 0.0, 'wrist': -0.00017, 'settle': 1.2},
-            ],
-            'pick_pose_stream_sec': 0.45,
-            'pick_pose_stream_hz': 28.0,
-            'drop_pose_stream_sec': 0.35,
-            'drop_pose_stream_hz': 28.0,
-            'stage_settle_sec': 0.72,
-            'attach_wait_sec': 2.5,
-            'attach_wait_arm_hz': 25.0,
-            # joint targets
-            'stages': {
-                'stage1': {'shoulder': 0.38, 'elbow': -0.88, 'wrist': 0.06},
-                'stage2': {'shoulder': 0.42, 'elbow': -1.32, 'wrist': 0.06},
-                'stage3': {'shoulder': 1.12, 'elbow': -1.92, 'wrist': 0.02},
-            },
-        },
-        'waypoints': [],
-    }
-
-
-def _deep_merge(base: Dict[str, Any], over: Dict[str, Any]) -> Dict[str, Any]:
-    out = dict(base)
-    for k, v in over.items():
+def _deep_merge(a: Dict[str, Any], b: Dict[str, Any]) -> Dict[str, Any]:
+    out = dict(a)
+    for k, v in b.items():
         if k in out and isinstance(out[k], dict) and isinstance(v, dict):
             out[k] = _deep_merge(out[k], v)
         else:
@@ -215,866 +94,591 @@ def _deep_merge(base: Dict[str, Any], over: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
-def load_tidying_config(path: Optional[str]) -> Dict[str, Any]:
-    cfg = _default_config()
-    if not path or not os.path.isfile(path):
-        return cfg
-    with open(path, 'r', encoding='utf-8') as f:
-        loaded = yaml.safe_load(f)
-    if isinstance(loaded, dict):
-        cfg = _deep_merge(cfg, loaded)
+def default_config() -> Dict[str, Any]:
+    return {
+        'motion': {
+            'v_max': 0.28,
+            'turn_k': 0.65,
+            'turn_w_max': 0.36,
+            'heading_tol_rad': 0.05,
+            'turn_hz': 30.0,
+            'loop_hz': 20.0,
+            'brake_iters': 12,
+            'pos_tol': 0.14,
+            'pre_drop_pos_tol': 0.055,
+            'drive_odom_step_cap': True,
+            'drive_brake_at_goal': True,
+            'drive_timeout_sec': 120.0,
+            'turn_timeout_sec': 45.0,
+            'approach_k': 0.45,
+            'slow_radius_m': 0.55,
+            'v_near_max': 0.08,
+            'v_crawl_min': 0.03,
+            'pause_sec': 0.3,
+            'halt_pause_sec': 0.55,
+            'cmd_vel_angular_scale': 1.0,
+            # Before drop after (7.5, pre_drop_y): +π/2 CCW; flip sign in yaml if needed.
+            'pre_drop_turn_rad': 1.5707963267948966,
+            'pre_drop_y': 8.5,
+            # Block until /imu/data has orientation before any IMU turn.
+            'imu_wait_timeout_sec': 90.0,
+        },
+        'drop_zone': {'center_x': DEFAULT_BOX[0], 'center_y': DEFAULT_BOX[1]},
+        'arm': {
+            'stage_settle_sec': 0.72,
+            'settle_drop': 1.0,
+            'attach_wait_sec': 1.2,
+            'attach_hz': 5.0,
+            'pick_magnet_pause': 0.25,
+            'drop_magnet_pause': 0.4,
+            'pick_standoff_m': 0.22,
+            'pick_pose_stream_sec': 0.28,
+            'pick_pose_stream_hz': 28.0,
+            'attach_pre_delay_sec': 0.22,
+            'attach_burst_count': 3,
+            'attach_burst_period_sec': 0.1,
+            'attach_resend_sec': 0.32,
+            'drop_pose_stream_sec': 0.35,
+            'drop_pose_stream_hz': 28.0,
+            'stages': {
+                'stage1': {'shoulder': -0.00006, 'elbow': 0.0, 'wrist': -0.00017},
+                'stage2': {'shoulder': -0.00006, 'elbow': 0.0, 'wrist': -1.309},
+                'stage3': {'shoulder': -0.63, 'elbow': 0.0, 'wrist': -1.309},
+            },
+        },
+    }
+
+
+def load_yaml(path: Optional[str]) -> Dict[str, Any]:
+    cfg = default_config()
+    if path and os.path.isfile(path):
+        with open(path, 'r', encoding='utf-8') as f:
+            data = yaml.safe_load(f)
+        if isinstance(data, dict):
+            cfg = _deep_merge(cfg, data)
     return cfg
 
 
-class DriftbotTaskNode(Node):
+class TaskNode(Node):
     def __init__(self) -> None:
         super().__init__('driftbot_task')
-        self.declare_parameter('log_path', '')
-        self.declare_parameter('tidy_config', '')
+        self.declare_parameter('mission_config', '')
+        self.declare_parameter('spawn_x', '7.5')
+        self.declare_parameter('spawn_y', '9.0')
+        self.declare_parameter('spawn_yaw', '-1.5708')
+        self.declare_parameter('imu_topic', '/imu/data')
 
-        self._log_path = self.get_parameter('log_path').get_parameter_value().string_value
-        tc = self.get_parameter('tidy_config').get_parameter_value().string_value.strip()
-        if not tc:
-            tc = os.path.join(
-                get_package_share_directory('driftbot_task'),
-                'config',
-                'tidying.yaml',
+        mc = self.get_parameter('mission_config').value
+        if not str(mc).strip():
+            mc = os.path.join(
+                get_package_share_directory('driftbot_task'), 'config', 'mission.yaml'
             )
-        self._cfg = load_tidying_config(tc if os.path.isfile(tc) else None)
-        if not os.path.isfile(tc):
-            self.get_logger().warn(f'Missing config {tc}, using defaults + empty waypoints')
+        self._cfg = load_yaml(mc if os.path.isfile(str(mc)) else None)
 
-        self._odom_xy_yaw: Tuple[float, float, float] = (0.0, 0.0, 0.0)
-        self._total_dist = 0.0
-        self._last_odom: Optional[Tuple[float, float]] = None
-        self._scan_min = float('inf')
-        self._scan_min_front = float('inf')
-        self._scan_min_front_l = float('inf')
-        self._scan_min_front_r = float('inf')
-        self._scan_left = float('inf')
-        self._scan_right = float('inf')
-        self._scan_min_rear = float('inf')
-        self._scan_seen = False
-        self._cam_samples = 0
+        def sf(name: str, default: float) -> float:
+            v = self.get_parameter(name).value
+            if isinstance(v, (int, float)):
+                return float(v)
+            return float(str(v).strip())
 
-        self._rooms_visited = set()
-        self._csv_file = None
-        self._csv_writer = None
-        self._marker_id = 0
+        self._spawn = (sf('spawn_x', 7.5), sf('spawn_y', 9.0))
+        self._spawn_yaw = sf('spawn_yaw', -math.pi / 2.0)
+        self._w_scale = float(self._cfg['motion'].get('cmd_vel_angular_scale', 1.0))
 
-        self._cmd_pub = self.create_publisher(Twist, 'cmd_vel', 10)
-        self._marker_pub = self.create_publisher(Marker, 'tidying_goal_marker', 10)
-        qos_scan = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
+        self._odom: Tuple[float, float, float] = (0.0, 0.0, 0.0)
+        self._odom_n = 0
+        self._imu_yaw: Optional[float] = None
+        self._imu_n = 0
+        self._carry = False
+
+        self._cmd = self.create_publisher(Twist, 'cmd_vel', 10)
+        qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
         self.create_subscription(Odometry, 'odom', self._odom_cb, 50)
-        self.create_subscription(LaserScan, 'scan', self._scan_cb, qos_scan)
-        self.create_subscription(
-            Image,
-            '/camera/image_raw',
-            self._img_cb,
-            QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT),
-        )
-        self.create_timer(1.0, self._status_timer_cb)
+        imu_topic = str(self.get_parameter('imu_topic').value or '/imu/data')
+        self.create_subscription(Imu, imu_topic, self._imu_cb, 50)
+        self.create_subscription(Image, '/camera/image_raw', lambda *_: None, qos)
 
-        qos_arm = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
-        self._arm_sh = self.create_publisher(Float64, 'arm_cmd_shoulder', qos_arm)
-        self._arm_el = self.create_publisher(Float64, 'arm_cmd_elbow', qos_arm)
-        self._arm_wr = self.create_publisher(Float64, 'arm_cmd_wrist', qos_arm)
+        q = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
+        self._pub_sh = self.create_publisher(Float64, 'arm_cmd_shoulder', q)
+        self._pub_el = self.create_publisher(Float64, 'arm_cmd_elbow', q)
+        self._pub_wr = self.create_publisher(Float64, 'arm_cmd_wrist', q)
 
-        self._tf_buf = Buffer(cache_time=Duration(seconds=30.0))
-        self._tf_listener = TransformListener(self._tf_buf, self, spin_thread=True)
+        qa = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE)
+        self._pub_attach: Dict[str, Any] = {
+            t: self.create_publisher(Empty, t, qa)
+            for t in sorted(set(ATTACH_TOPIC.values()))
+        }
+        self._pub_magnet_off = self.create_publisher(Empty, '/magnet_off', qa)
 
-    def _magnet_world_xyz(self) -> Optional[Tuple[float, float, float]]:
-        """Magnet TF world."""
-        try:
-            t = self._tf_buf.lookup_transform(
-                'odom',
-                'magnet_zone_link',
-                self.get_clock().now(),
-                timeout=Duration(seconds=0, nanoseconds=250_000_000),
-            )
-        except TransformException as ex:
-            self.get_logger().debug(f'magnet_zone_link TF: {ex}')
-            return None
-        tr = t.transform.translation
-        return (SPAWN_XY[0] + tr.x, SPAWN_XY[1] + tr.y, tr.z)
-
-    def _magnet_reach_allows_attach(self, model: str) -> bool:
-        """Attach radius check."""
-        arm = self._cfg.get('arm') or {}
-        defs = _default_config()['arm']
-        if not bool(arm.get('enforce_magnet_reach', defs.get('enforce_magnet_reach', True))):
-            return True
-        rm = float(arm.get('magnet_attach_radius_m', defs.get('magnet_attach_radius_m', 0.13)))
-        slop = float(arm.get('magnet_reach_slop_m', defs.get('magnet_reach_slop_m', 0.0)))
-        center = _PICKABLE_WORLD_XYZ.get(model)
-        rs = _PICKABLE_SURFACE_RADIUS_M.get(model)
-        if center is None or rs is None:
-            return True
-        m = self._magnet_world_xyz()
-        if m is None:
-            self.get_logger().warn(
-                'magnet_zone_link not in TF yet — skipping reach check (attach allowed)'
-            )
-            return True
-        d = math.sqrt(
-            (m[0] - center[0]) ** 2 + (m[1] - center[1]) ** 2 + (m[2] - center[2]) ** 2
-        )
-        limit = rm + rs + max(0.0, slop)
-        if d > limit:
-            self.get_logger().warn(
-                f'Magnet reach: dist to "{model}" center {d:.3f} m > {limit:.3f} m '
-                f'(magnet R={rm:.3f} + object ~{rs:.3f}).'
-            )
-            return False
-        return True
-
-    def gz_attach_pickable(self, model: str) -> bool:
-        """Publish attach."""
-        topic = _GZ_ATTACH_TOPIC.get(model)
-        if not topic:
-            return False
-        if not self._magnet_reach_allows_attach(model):
-            return False
-        _gz_publish_empty(topic)
-        return True
-
-    def _sleep_sim(self, duration_sec: float) -> None:
-        """Sim sleep."""
-        if duration_sec <= 0.0:
-            return
-        end = self.get_clock().now() + Duration(seconds=duration_sec)
-        while rclpy.ok() and self.get_clock().now() < end:
-            rclpy.spin_once(self, timeout_sec=0.02)
-
-    def wait_for_sim_ready(self, timeout_wall_sec: float = 120.0) -> None:
-        """Wait first odom."""
-        arm = self._cfg.get('arm') or {}
-        defs = _default_config()['arm']
-        stream = bool(arm.get('wait_stream_arm', defs.get('wait_stream_arm', True)))
-        hz = float(arm.get('wait_arm_hz', defs.get('wait_arm_hz', 35.0)))
-        period_wall = 1.0 / max(5.0, hz)
-        last_pub_wall = 0.0
-        wpose = arm.get('wait_stream_pose')
-        if not isinstance(wpose, dict):
-            wpose = defs['wait_stream_pose']  # type: ignore[assignment]
-        wsh = float(wpose.get('shoulder', 0.0))
-        wel = float(wpose.get('elbow', 0.0))
-        wwr = float(wpose.get('wrist', 0.0))
-
-        wall_end = time.monotonic() + timeout_wall_sec
-        self.get_logger().info('Waiting for simulation (first odom)...')
-        while time.monotonic() < wall_end and rclpy.ok():
-            rclpy.spin_once(self, timeout_sec=0.05)
-            if stream:
-                noww = time.monotonic()
-                if noww - last_pub_wall >= period_wall:
-                    self._arm_publish_rad(wsh, wel, wwr)
-                    last_pub_wall = noww
-            if self._last_odom is not None:
-                self.get_logger().info('Simulation ready — odom received.')
-                return
-        self.get_logger().warn(
-            'Timeout waiting for odom; continuing — mission may misbehave until topics connect.'
+        self.get_logger().info(
+            f'cmd_vel angular scale = {self._w_scale}; '
+            f'spawn world ({self._spawn[0]}, {self._spawn[1]}) yaw={self._spawn_yaw:.4f}'
         )
 
-    def world_pose(self) -> Tuple[float, float, float]:
-        ox, oy, yaw = self._odom_xy_yaw
-        return (SPAWN_XY[0] + ox, SPAWN_XY[1] + oy, yaw)
+    def _m(self) -> Dict[str, Any]:
+        return self._cfg['motion']
 
-    def _open_log(self) -> None:
-        path = self._log_path.strip() or '/tmp/driftbot_tidying_path.csv'
-        os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
-        self._csv_file = open(path, 'w', newline='')
-        self._csv_writer = csv.writer(self._csv_file)
-        self._csv_writer.writerow(['sim_time_sec', 'world_x', 'world_y', 'yaw', 'room', 'path_m'])
-        self.get_logger().info(f'Logging odometry path to {path}')
+    def _attach_pulse(self, topic: str) -> None:
+        pub = self._pub_attach.get(topic)
+        if pub is not None:
+            pub.publish(Empty())
+        gz_empty(topic)
 
-    def _log_sample(self) -> None:
-        if self._csv_writer is None:
-            return
-        wx, wy, yaw = self.world_pose()
-        t = self.get_clock().now().seconds_nanoseconds()
-        sec = t[0] + t[1] * 1e-9
-        self._csv_writer.writerow(
-            [
-                f'{sec:.3f}',
-                f'{wx:.4f}',
-                f'{wy:.4f}',
-                f'{yaw:.4f}',
-                room_label(wx, wy),
-                f'{self._total_dist:.4f}',
-            ]
-        )
-        self._csv_file.flush()
+    def _magnet_off_pulse(self) -> None:
+        self._pub_magnet_off.publish(Empty())
+        gz_empty('/magnet_off')
 
-    def _publish_goal_marker(self, goal_wx: float, goal_wy: float, label: str) -> None:
-        if not self._cfg['telemetry'].get('publish_goal_markers', True):
-            return
-        m = Marker()
-        m.header.frame_id = 'odom'
-        m.header.stamp = self.get_clock().now().to_msg()
-        m.ns = 'tidying_waypoint'
-        self._marker_id += 1
-        m.id = self._marker_id
-        m.type = Marker.SPHERE
-        m.action = Marker.ADD
-        m.pose.position.x = goal_wx - SPAWN_XY[0]
-        m.pose.position.y = goal_wy - SPAWN_XY[1]
-        m.pose.position.z = 0.15
-        m.pose.orientation.w = 1.0
-        m.scale.x = m.scale.y = m.scale.z = 0.22
-        m.color.r = 0.1
-        m.color.g = 0.7
-        m.color.b = 0.2
-        m.color.a = 0.9
-        m.lifetime.sec = 0
-        self.get_logger().debug(f'marker {label}')
-        self._marker_pub.publish(m)
+    def _send_cmd(self, tw: Twist) -> None:
+        out = Twist()
+        out.linear.x = tw.linear.x
+        out.linear.y = tw.linear.y
+        out.linear.z = tw.linear.z
+        out.angular.x = tw.angular.x
+        out.angular.y = tw.angular.y
+        out.angular.z = tw.angular.z * self._w_scale
+        self._cmd.publish(out)
 
     def _odom_cb(self, msg: Odometry) -> None:
         p = msg.pose.pose.position
         q = msg.pose.pose.orientation
-        yaw = quat_yaw(q.z, q.w)
-        self._odom_xy_yaw = (p.x, p.y, yaw)
-        if self._last_odom is None:
-            self._last_odom = (p.x, p.y)
+        self._odom = (p.x, p.y, quat_yaw(q.x, q.y, q.z, q.w))
+        self._odom_n += 1
+
+    def _imu_cb(self, msg: Imu) -> None:
+        q = msg.orientation
+        n = q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w
+        if n < 1e-10:
             return
-        lx, ly = self._last_odom
-        self._total_dist += math.hypot(p.x - lx, p.y - ly)
-        self._last_odom = (p.x, p.y)
+        self._imu_yaw = quat_yaw(q.x, q.y, q.z, q.w)
+        self._imu_n += 1
 
-    def _scan_cb(self, msg: LaserScan) -> None:
-        self._scan_seen = True
-        n = len(msg.ranges)
-        if n == 0:
+    def world_pose(self) -> Tuple[float, float, float]:
+        """Map planar odom (spawn-aligned) into fixed world XY and yaw."""
+        ox, oy, yaw_odom = self._odom
+        c = math.cos(self._spawn_yaw)
+        s = math.sin(self._spawn_yaw)
+        wx = self._spawn[0] + c * ox - s * oy
+        wy = self._spawn[1] + s * ox + c * oy
+        w_yaw = wrap_pi(self._spawn_yaw + yaw_odom)
+        return (wx, wy, w_yaw)
+
+    def _period(self) -> float:
+        hz = float(self._m().get('loop_hz', 20.0))
+        return 1.0 / max(5.0, hz)
+
+    def _turn_dt(self) -> float:
+        hz = float(self._m().get('turn_hz', 30.0))
+        return 1.0 / max(5.0, hz)
+
+    def _spin_sleep(self, sec: float) -> None:
+        if sec <= 0.0:
             return
-        inc = msg.angle_increment
-        valid = []
-        for i, r in enumerate(msg.ranges):
-            if msg.range_min < r < msg.range_max:
-                ang = msg.angle_min + i * inc
-                valid.append((i, r, ang))
-        if not valid:
-            return
-        self._scan_min = min(r for _, r, _ in valid)
-        mid = n // 2
-        span = max(3, n // 10)
-        front_narrow = [r for i, r, a in valid if mid - span <= i <= mid + span]
-        if front_narrow:
-            self._scan_min_front = min(front_narrow)
-        fl = [r for i, r, a in valid if mid < i <= mid + span * 2]
-        fr = [r for i, r, a in valid if mid - span * 2 <= i < mid]
-        if fl:
-            self._scan_min_front_l = min(fl)
-        if fr:
-            self._scan_min_front_r = min(fr)
-        left = [r for i, r, a in valid if i >= n * 3 // 4]
-        right = [r for i, r, a in valid if i <= n // 4]
-        if left:
-            self._scan_left = min(left)
-        if right:
-            self._scan_right = min(right)
+        end = self.get_clock().now() + Duration(seconds=sec)
+        while rclpy.ok() and self.get_clock().now() < end:
+            rclpy.spin_once(self, timeout_sec=0.02)
 
-        rear_deg = math.radians(float(self._cfg['obstacle'].get('rear_check_deg', 55.0)))
-        rear_rs = [r for _, r, a in valid if abs(abs(a) - math.pi) < rear_deg]
-        if rear_rs:
-            self._scan_min_rear = min(rear_rs)
-        else:
-            self._scan_min_rear = float('inf')
+    def _pause(self) -> None:
+        s = float(self._m().get('pause_sec', 0.0))
+        if s > 0.0:
+            self._spin_sleep(s)
 
-    def _img_cb(self, msg: Image) -> None:
-        if msg.data:
-            self._cam_samples += 1
+    def _brake(self) -> None:
+        z = Twist()
+        dt = self._period()
+        for _ in range(max(4, int(self._m().get('brake_iters', 12)))):
+            self._send_cmd(z)
+            rclpy.spin_once(self, timeout_sec=0.0)
+            self._spin_sleep(dt)
 
-    def _status_timer_cb(self) -> None:
-        wx, wy, yaw = self.world_pose()
-        ox, oy, _ = self._odom_xy_yaw
-        self.get_logger().info(
-            f'[telemetry] path={self._total_dist:.2f} m | odom=({ox:.2f},{oy:.2f}) | '
-            f'world=({wx:.2f},{wy:.2f}) room={room_label(wx, wy)} | '
-            f'scan_min={self._scan_min:.2f} front={self._scan_min_front:.2f} | '
-            f'cam_msgs={self._cam_samples}'
-        )
+    def _halt_stop(self, label: str = '') -> None:
+        """Zero cmd_vel, brake iterations, then hold so the base settles."""
+        msg = f'Halt stop {label}'.strip()
+        if msg != 'Halt stop':
+            self.get_logger().info(msg)
+        self.stop()
+        self._brake()
+        self._spin_sleep(float(self._m().get('halt_pause_sec', 0.5)))
 
     def stop(self) -> None:
-        self._cmd_pub.publish(Twist())
+        self._send_cmd(Twist())
 
-    def _obstacle_clearance(self) -> Tuple[float, float, float, float]:
-        return (
-            self._scan_min_front,
-            self._scan_left,
-            self._scan_right,
-            self._scan_min_rear,
-        )
-
-    def _linear_speed_scale(self, front: float) -> float:
-        obs = self._cfg['obstacle']
-        f_stop = float(obs.get('front_stop', 0.38))
-        f_slow = float(obs.get('front_slow', 0.62))
-        if math.isinf(front):
-            return 1.0
-        if front <= f_stop:
-            return 0.12
-        if front >= f_slow:
-            return 1.0
-        return 0.12 + 0.88 * (front - f_stop) / (f_slow - f_stop)
-
-    def _drive_for_sim_duration(self, twist: Twist, dur: Duration) -> None:
-        end = self.get_clock().now() + dur
-        period = 1.0 / max(10.0, float(self._cfg['motion'].get('loop_rate_hz', 20.0)))
-        while self.get_clock().now() < end and rclpy.ok():
-            rclpy.spin_once(self, timeout_sec=0.0)
-            self._cmd_pub.publish(twist)
-            self._sleep_sim(period)
-        self.stop()
-
-    def run_recovery(self) -> None:
-        """Unstuck routine."""
-        rec = self._cfg['recovery']
-        self.get_logger().warn('Progress stalled — recovery (spin / backup / wait)')
-        spin = Twist()
-        spin.angular.z = float(rec.get('spin_w', 0.85))
-        spin_dur = float(rec.get('spin_duration_sec', 1.1))
-        self._drive_for_sim_duration(spin, Duration(seconds=spin_dur))
-
-        rear = self._scan_min_rear
-        min_rear = float(rec.get('min_rear_clearance_for_backup', 0.42))
-        if not math.isinf(rear) and rear >= min_rear:
-            back = Twist()
-            back.linear.x = float(rec.get('backup_v', -0.14))
-            back_dur = float(rec.get('backup_duration_sec', 0.65))
-            self._drive_for_sim_duration(back, Duration(seconds=back_dur))
-
-        wait = float(rec.get('wait_after_recovery_sec', 0.35))
-        if wait > 0.0:
-            self._drive_for_sim_duration(Twist(), Duration(seconds=wait))
-
-    def navigate_to(
-        self,
-        goal_wx: float,
-        goal_wy: float,
-        label: str,
-        timeout_sec: Optional[float] = None,
-        pos_tol_override: Optional[float] = None,
-    ) -> bool:
-        """Drive to XY goal."""
-        m = self._cfg['motion']
-        pr = self._cfg['progress']
-        if timeout_sec is None:
-            timeout_sec = float(m.get('per_waypoint_timeout_sec', 75.0))
-        pos_tol = (
-            float(pos_tol_override)
-            if pos_tol_override is not None
-            else float(m.get('pos_tol', 0.28))
-        )
-        v_max = float(m.get('v_max', 0.38))
-        w_max = float(m.get('w_max', 1.0))
-        align_tol = float(m.get('nav_align_yaw_tol_rad', 0.1))
-        k_w = float(m.get('rotate_to_goal_gain', 2.4))
-        k_v = float(m.get('approach_linear_gain', 0.48))
-        period = 1.0 / max(10.0, float(m.get('loop_rate_hz', 20.0)))
-
-        end = self.get_clock().now() + Duration(seconds=timeout_sec)
-        prog_allow = float(pr.get('movement_time_allowance_sec', 12.0))
-        prog_rad = float(pr.get('required_movement_radius', 0.45))
-        prog_deadline = self.get_clock().now() + Duration(seconds=prog_allow)
-        ax, ay, _ = self.world_pose()
-        obs = self._cfg.get('obstacle') or {}
-        wf_enable = bool(obs.get('wall_follow_enable', True))
-        wf_trig = float(obs.get('wall_follow_trigger_front_m', 0.45))
-        wf_stuck = float(obs.get('wall_follow_stuck_before_sec', 3.5))
-        wf_dur = float(obs.get('wall_follow_max_duration_sec', 10.0))
-        wf_v = float(obs.get('wall_follow_linear_m_s', 0.12))
-        wf_kw = float(obs.get('wall_follow_angular_gain', 2.0))
-        wf_side = float(obs.get('wall_follow_desired_side_m', 0.38))
-        wall_follow_until = None
-        stagn_t = 0.0
-        last_dist = float('inf')
-
-        while rclpy.ok():
-            now = self.get_clock().now()
-            if now > end:
-                self.get_logger().warn(f'Timeout reaching {label} ({goal_wx:.1f},{goal_wy:.1f})')
-                self.stop()
-                return False
-            rclpy.spin_once(self, timeout_sec=0.0)
-
-            wx, wy, yaw = self.world_pose()
-            self._rooms_visited.add(room_label(wx, wy))
-
-            if self.get_clock().now() > prog_deadline:
-                moved = math.hypot(wx - ax, wy - ay)
-                if moved < prog_rad:
-                    self.run_recovery()
-                ax, ay = wx, wy
-                prog_deadline = self.get_clock().now() + Duration(seconds=prog_allow)
-
-            dx = goal_wx - wx
-            dy = goal_wy - wy
-            dist = math.hypot(dx, dy)
-            if dist < pos_tol:
-                self.stop()
-                self._publish_goal_marker(goal_wx, goal_wy, label)
-                self.get_logger().info(f'Goal reached: {label}')
-                return True
-
-            front, left, right, _rear = self._obstacle_clearance()
-
-            if wall_follow_until is not None:
-                if now < wall_follow_until:
-                    right_m = right if not math.isinf(right) else 2.0
-                    twist = Twist()
-                    twist.linear.x = wf_v
-                    twist.angular.z = max(
-                        -w_max * 0.75,
-                        min(w_max * 0.75, wf_kw * (wf_side - right_m)),
-                    )
-                    self._cmd_pub.publish(twist)
-                    self._sleep_sim(period)
-                    continue
-                wall_follow_until = None
-                stagn_t = 0.0
-                last_dist = dist
-
-            if dist < last_dist - 0.02:
-                last_dist = dist
-                stagn_t = 0.0
-            else:
-                stagn_t += period
-            if wf_enable and front < wf_trig and stagn_t >= wf_stuck:
-                wall_follow_until = now + Duration(seconds=wf_dur)
-                stagn_t = 0.0
-                self.get_logger().info('Nav: wall follow')
-
-            target_h = math.atan2(dy, dx)
-            h_err = angle_diff(target_h, yaw)
-            v_scale = self._linear_speed_scale(front)
-
-            twist = Twist()
-            if front < 0.52 and not math.isinf(front):
-                twist.linear.x = 0.04 * v_scale
-                fl = self._scan_min_front_l
-                fr = self._scan_min_front_r
-                if math.isinf(fl) and math.isinf(fr):
-                    bias = 1.0 if left > right else -1.0
-                else:
-                    bias = 1.0 if fl > fr else -1.0
-                twist.angular.z = bias * w_max * 0.75
-            elif abs(h_err) > align_tol:
-                twist.angular.z = max(-w_max, min(w_max, k_w * h_err))
-            else:
-                twist.angular.z = max(-w_max, min(w_max, k_w * h_err))
-                twist.linear.x = min(v_max * v_scale, k_v * dist)
-
-            self._cmd_pub.publish(twist)
-            self._sleep_sim(period)
-
-        self.stop()
-        return False
-
-    def rotate_to_face(
-        self, target_wx: float, target_wy: float, timeout_sec: float = 35.0
-    ) -> None:
-        """Turn to point."""
-        m = self._cfg['motion']
-        w_max = float(m.get('w_max', 1.0))
-        k_w = 2.85
-        face_tol = 0.11
-        period = 1.0 / max(10.0, float(m.get('loop_rate_hz', 20.0)))
-        end = self.get_clock().now() + Duration(seconds=timeout_sec)
+    def turn_to_yaw(self, target_yaw: float, label: str = '') -> None:
+        m = self._m()
+        tol = float(m.get('heading_tol_rad', 0.05))
+        k = float(m.get('turn_k', 0.55))
+        wcap = float(m.get('turn_w_max', 0.2))
+        tout = float(m.get('turn_timeout_sec', 45.0))
+        dt = self._turn_dt()
+        end = self.get_clock().now() + Duration(seconds=tout)
+        self.get_logger().info(f'Turn → {target_yaw:.4f} rad {label}')
         while rclpy.ok() and self.get_clock().now() < end:
             rclpy.spin_once(self, timeout_sec=0.0)
-            wx, wy, yaw = self.world_pose()
-            target_h = math.atan2(target_wy - wy, target_wx - wx)
-            h_err = angle_diff(target_h, yaw)
-            if abs(h_err) < face_tol:
-                self.stop()
-                return
-            twist = Twist()
-            twist.angular.z = max(-w_max, min(w_max, k_w * h_err))
-            self._cmd_pub.publish(twist)
-            self._sleep_sim(period)
+            err = angle_diff(target_yaw, self.world_pose()[2])
+            if abs(err) < tol:
+                break
+            tw = Twist()
+            tw.angular.z = max(-wcap, min(wcap, k * err))
+            self._send_cmd(tw)
+            self._spin_sleep(dt)
         self.stop()
+        self._brake()
 
-    def _drop_approach_hold_xy(self) -> Tuple[float, float]:
-        """Drop standoff XY."""
-        dz = self._cfg.get('drop_zone')
-        if not isinstance(dz, dict):
-            cx, cy = BOX_XY[0], BOX_XY[1]
-        else:
-            cx = float(dz.get('center_x', BOX_XY[0]))
-            cy = float(dz.get('center_y', BOX_XY[1]))
-        m = self._cfg.get('motion') or {}
-        standoff = float(m.get('drop_approach_standoff_m', 0.5))
-        wx, wy, _ = self.world_pose()
-        vx, vy = wx - cx, wy - cy
-        d = math.hypot(vx, vy)
-        if d < 0.08:
-            return (cx - standoff, cy)
-        return (cx + standoff * vx / d, cy + standoff * vy / d)
+    def turn_by(self, delta: float, label: str = '') -> None:
+        rclpy.spin_once(self, timeout_sec=0.0)
+        y = self.world_pose()[2]
+        self.turn_to_yaw(wrap_pi(y + delta), label)
 
-    def _approach_xy_until_distance(self, tx: float, ty: float, dist_target: float) -> None:
-        """Creep to distance."""
-        m = self._cfg.get('motion') or {}
-        defs = _default_config()['motion']
-        timeout = float(
-            m.get('pick_approach_timeout_sec', defs.get('pick_approach_timeout_sec', 35.0))
+    def _wait_imu_ready(self, why: str = '') -> None:
+        m = self._m()
+        tout = float(m.get('imu_wait_timeout_sec', 90.0))
+        t0 = time.monotonic()
+        msg = f'Waiting for IMU {why}'.strip()
+        if msg != 'Waiting for IMU':
+            self.get_logger().info(msg)
+        while rclpy.ok() and time.monotonic() - t0 < tout:
+            rclpy.spin_once(self, timeout_sec=0.05)
+            if self._imu_n >= 3 and self._imu_yaw is not None:
+                return
+        imu_topic = str(self.get_parameter('imu_topic').value or '/imu/data')
+        raise RuntimeError(
+            f'IMU required: no orientation on {imu_topic} within {tout}s. '
+            'Check base_link IMU in URDF, gz-sim-imu-system in world, and '
+            'ros_gz_bridge /imu → /imu/data.'
         )
-        v_max = float(m.get('pick_approach_v_max', defs.get('pick_approach_v_max', 0.1)))
-        w_max = float(m.get('w_max', 1.0))
-        period = 1.0 / max(10.0, float(m.get('loop_rate_hz', 20.0)))
-        end = self.get_clock().now() + Duration(seconds=timeout)
-        self.get_logger().info(
-            f'Pick approach: creep until distance ≤ {dist_target:.2f} m (object in front)'
-        )
+
+    def turn_to_imu_yaw(self, target_yaw: float, label: str = '') -> None:
+        """Closed-loop yaw using IMU orientation (world yaw of base_link)."""
+        m = self._m()
+        tol = float(m.get('heading_tol_rad', 0.05))
+        k = float(m.get('turn_k', 0.55))
+        wcap = float(m.get('turn_w_max', 0.2))
+        tout = float(m.get('turn_timeout_sec', 45.0))
+        dt = self._turn_dt()
+        end = self.get_clock().now() + Duration(seconds=tout)
+        self.get_logger().info(f'IMU turn → {target_yaw:.4f} rad {label}')
         while rclpy.ok() and self.get_clock().now() < end:
             rclpy.spin_once(self, timeout_sec=0.0)
-            wx, wy, yaw = self.world_pose()
-            dx, dy = tx - wx, ty - wy
-            dist = math.hypot(dx, dy)
-            if dist <= dist_target:
-                self.stop()
-                self.get_logger().info(f'Pick approach: hold at {dist:.3f} m')
-                return
-            target_h = math.atan2(dy, dx)
-            h_err = angle_diff(target_h, yaw)
-            twist = Twist()
-            if abs(h_err) > 0.12:
-                twist.angular.z = max(-w_max, min(w_max, 2.6 * h_err))
-            else:
-                twist.linear.x = min(v_max, max(0.035, 0.42 * dist))
-            front, _, _, _ = self._obstacle_clearance()
-            if front < 0.34 and not math.isinf(front):
-                twist.linear.x = min(twist.linear.x, 0.05)
-            self._cmd_pub.publish(twist)
-            self._sleep_sim(period)
+            if self._imu_yaw is None:
+                raise RuntimeError('IMU orientation lost during turn')
+            err = angle_diff(target_yaw, self._imu_yaw)
+            if abs(err) < tol:
+                break
+            tw = Twist()
+            tw.angular.z = max(-wcap, min(wcap, k * err))
+            self._send_cmd(tw)
+            self._spin_sleep(dt)
         self.stop()
-        self.get_logger().warn('Pick approach: timeout — continuing arm sequence anyway')
-
-    def _arm_rviz_stage_triplet(self, stage_key: str) -> Dict[str, float]:
-        """Stage joint dict."""
-        arm = self._cfg.get('arm') or {}
-        defs = _default_config()['arm']
-        st = arm.get('stages')
-        if isinstance(st, dict):
-            d = st.get(stage_key)
-            if isinstance(d, dict):
-                sh = d.get('shoulder')
-                el = d.get('elbow')
-                wr = d.get('wrist')
-                if sh is not None and el is not None and wr is not None:
-                    return {
-                        'shoulder': float(sh),
-                        'elbow': float(el),
-                        'wrist': float(wr),
-                    }
-        fb_st = defs.get('stages') or {}
-        if isinstance(fb_st, dict) and isinstance(fb_st.get(stage_key), dict):
-            d = fb_st[stage_key]
-            return {
-                'shoulder': float(d['shoulder']),
-                'elbow': float(d['elbow']),
-                'wrist': float(d['wrist']),
-            }
-        s1 = fb_st.get('stage1') if isinstance(fb_st, dict) else None
-        if isinstance(s1, dict):
-            self.get_logger().warn(
-                f'arm.stages.{stage_key} missing joint triple; using stage1 as fallback'
+        self._brake()
+        if self._imu_yaw is None:
+            raise RuntimeError('IMU orientation missing after turn')
+        if abs(angle_diff(target_yaw, self._imu_yaw)) >= tol:
+            raise RuntimeError(
+                f'IMU turn did not converge: want {target_yaw:.4f} have {self._imu_yaw:.4f} {label}'
             )
-            return {
-                'shoulder': float(s1['shoulder']),
-                'elbow': float(s1['elbow']),
-                'wrist': float(s1['wrist']),
-            }
-        return {'shoulder': 0.0, 'elbow': 0.0, 'wrist': 0.0}
 
-    def _arm_goto_rviz_stage(self, stage_key: str) -> None:
-        arm = self._cfg.get('arm') or {}
-        defs = _default_config()['arm']
-        settle_map = arm.get('stage_settle')
-        if isinstance(settle_map, dict) and stage_key in settle_map:
-            sec = float(settle_map[stage_key])
-        else:
-            sec = float(arm.get('stage_settle_sec', defs.get('stage_settle_sec', 0.72)))
-        p = self._arm_rviz_stage_triplet(stage_key)
-        self._arm_publish_rad(p['shoulder'], p['elbow'], p['wrist'])
-        self._sleep_sim(sec)
+    def turn_by_imu(self, delta: float, label: str = '') -> None:
+        """Relative spin using IMU only (blocks until IMU valid)."""
+        self._wait_imu_ready(label)
+        rclpy.spin_once(self, timeout_sec=0.0)
+        y0 = self._imu_yaw
+        if y0 is None:
+            raise RuntimeError('IMU yaw unavailable')
+        self.turn_to_imu_yaw(wrap_pi(y0 + delta), label)
 
-    def _arm_publish_rad(self, shoulder: float, elbow: float, wrist: float) -> None:
-        self._arm_sh.publish(Float64(data=shoulder))
-        self._arm_el.publish(Float64(data=elbow))
-        self._arm_wr.publish(Float64(data=wrist))
+    def face_toward(self, wx: float, wy: float, label: str = '') -> None:
+        rclpy.spin_once(self, timeout_sec=0.0)
+        rx, ry, _ = self.world_pose()
+        self.turn_to_yaw(math.atan2(wy - ry, wx - rx), label)
+
+    def _pre_drop_drive_hardcoded(self) -> None:
+        """After ``turn_by_imu(π)``: IMU face +map Y, then constant ``linear.x`` until ``wy`` ≥ 8.5.
+
+        Relative π does not land on +Y in the IMU frame (often ~−π → along-logic dies); this
+        uses a fixed yaw π/2 then stops on ``world_pose`` Y only (same frame as toy row).
+        """
+        m = self._m()
+        tol = float(m.get('pre_drop_pos_tol', 0.055))
+        self._wait_imu_ready('pre-drop')
+        # Hardcoded column stop (meters); keep in sync with ``pre_drop_y`` in yaml.
+        _GOAL_Y = 8.5
+        self.turn_to_imu_yaw(math.pi / 2.0, 'pre-drop face +Y')
+        self._halt_stop()
+        v_max = float(m.get('v_max', 0.28))
+        dt = self._period()
+        tout = float(m.get('drive_timeout_sec', 120.0))
+        use_cap = bool(m.get('drive_odom_step_cap', True))
+        brake_goal = bool(m.get('drive_brake_at_goal', True))
+        end = self.get_clock().now() + Duration(seconds=tout)
+        self.get_logger().info(f'Hard +Y drive until wy>={_GOAL_Y - tol:.3f}')
+        while rclpy.ok() and self.get_clock().now() < end:
+            rclpy.spin_once(self, timeout_sec=0.0)
+            _, wy, _ = self.world_pose()
+            rem = _GOAL_Y - tol - wy
+            if rem <= 0.0:
+                self.stop()
+                if brake_goal:
+                    self._brake()
+                self.get_logger().info(f'Pre-drop done wy={wy:.4f}')
+                return
+            tw = Twist()
+            tw.angular.z = 0.0
+            v = v_max
+            if use_cap:
+                cap_v = rem / max(dt, 1e-4)
+                v = min(v, cap_v)
+            tw.linear.x = v
+            self._send_cmd(tw)
+            self._spin_sleep(dt)
+        self.stop()
+        self.get_logger().warn('Pre-drop drive timeout')
+
+    def drive_straight_to(
+        self,
+        wx: float,
+        wy: float,
+        label: str = '',
+        *,
+        pos_tol: Optional[float] = None,
+    ) -> None:
+        """Face-aligned leg: ``linear.x`` only; stop when ``hypot(dx,dy) < tol``."""
+        m = self._m()
+        v_max = float(m.get('v_max', 0.28))
+        kv = float(m.get('approach_k', 0.45))
+        tol = float(pos_tol) if pos_tol is not None else float(m.get('pos_tol', 0.14))
+        slow_r = float(m.get('slow_radius_m', 0.55))
+        v_near = float(m.get('v_near_max', 0.08))
+        v_crawl = float(m.get('v_crawl_min', 0.03))
+        tout = float(m.get('drive_timeout_sec', 120.0))
+        use_cap = bool(m.get('drive_odom_step_cap', True))
+        brake_goal = bool(m.get('drive_brake_at_goal', True))
+        dt = self._period()
+        end = self.get_clock().now() + Duration(seconds=tout)
+        self.get_logger().info(f'Stride → ({wx:.2f},{wy:.2f}) tol={tol:.3f} {label}')
+        while rclpy.ok() and self.get_clock().now() < end:
+            rclpy.spin_once(self, timeout_sec=0.0)
+            rx, ry, _ = self.world_pose()
+            dx, dy = wx - rx, wy - ry
+            dist = math.hypot(dx, dy)
+            if dist < tol:
+                self.stop()
+                if brake_goal:
+                    self._brake()
+                self.get_logger().info(f'At goal {label}')
+                return
+            tw = Twist()
+            tw.angular.z = 0.0
+            v = min(v_max, kv * dist)
+            if slow_r > 0.0 and dist < slow_r:
+                slp = dist / slow_r
+                v = min(v, max(v_near * slp, v_crawl))
+            if use_cap and dist > tol:
+                cap_v = max(0.0, dist - tol) / max(dt, 1e-4)
+                v = min(v, cap_v)
+            tw.linear.x = v
+            self._send_cmd(tw)
+            self._spin_sleep(dt)
+        self.stop()
+        self.get_logger().warn(f'Drive timeout {label}')
+
+    def drive_to(
+        self,
+        wx: float,
+        wy: float,
+        label: str = '',
+        *,
+        pos_tol: Optional[float] = None,
+    ) -> None:
+        self.face_toward(wx, wy, f'face {label}')
+        self.drive_straight_to(wx, wy, label, pos_tol=pos_tol)
+
+    def _arm_set(self, sh: float, el: float, wr: float) -> None:
+        self._pub_sh.publish(Float64(data=sh))
+        self._pub_el.publish(Float64(data=el))
+        self._pub_wr.publish(Float64(data=wr))
         for _ in range(3):
             rclpy.spin_once(self, timeout_sec=0.0)
 
-    def _arm_hold_rad(
-        self, shoulder: float, elbow: float, wrist: float, duration_sec: float, hz: float
-    ) -> None:
-        """Hold joints; sim+wall clock."""
-        if duration_sec <= 0.0:
+    def _stage(self, key: str) -> None:
+        arm = self._cfg['arm']
+        st = arm['stages'][key]
+        sec = float(arm.get('stage_settle_sec', 0.72))
+        self._arm_set(float(st['shoulder']), float(st['elbow']), float(st['wrist']))
+        self._spin_sleep(sec)
+
+    def pick(self, name: str, *, drive_in: bool = True) -> None:
+        o = OBJECTS.get(name)
+        if not o:
+            self.get_logger().error(f'Unknown object {name}')
             return
-        period = 1.0 / max(5.0, hz)
-        t_wall_start = time.monotonic()
-        end = self.get_clock().now() + Duration(seconds=duration_sec)
-        while rclpy.ok():
-            wall_elapsed = time.monotonic() - t_wall_start
-            sim_done = self.get_clock().now() >= end
-            if sim_done and wall_elapsed >= duration_sec:
-                break
-            self._arm_publish_rad(shoulder, elbow, wrist)
-            self._sleep_sim(period)
+        arm = self._cfg['arm']
+        ox, oy = o[0], o[1]
+        self.face_toward(ox, oy, f'pick {name} face')
+        rx, ry, _ = self.world_pose()
+        dx, dy = ox - rx, oy - ry
+        d = math.hypot(dx, dy) or 1e-6
+        so = float(arm.get('pick_standoff_m', 0.22))
+        if drive_in:
+            gx = ox - (dx / d) * so
+            gy = oy - (dy / d) * so
+            # Same bearing as facing the object; no extra spin before the short creep.
+            self.drive_straight_to(gx, gy, f'pick {name} in')
+        self.face_toward(ox, oy, f'pick {name} aim')
 
-    def arm_stage_to_carry(self) -> None:
-        """Bootstrap arm poses."""
-        arm = self._cfg.get('arm') or {}
-        defs = _default_config()['arm']
-        stages = arm.get('bootstrap_stages')
-        if not isinstance(stages, list) or not stages:
-            stages = defs['bootstrap_stages']  # type: ignore[assignment]
-        hz = float(arm.get('bootstrap_hold_hz', defs.get('bootstrap_hold_hz', 25.0)))
-        self.get_logger().info(f'Arm: staged carry — {len(stages)} segments @ {hz:.0f} Hz sim')
-        for st in stages:
-            if not isinstance(st, dict):
-                continue
-            sh = float(st.get('shoulder', 0.0))
-            el = float(st.get('elbow', 0.0))
-            wr = float(st.get('wrist', 0.0))
-            settle = float(st.get('settle', 0.4))
-            self._arm_hold_rad(sh, el, wr, settle, hz)
+        self._stage('stage1')
+        self._stage('stage2')
+        self._stage('stage3')
+        ph = float(arm.get('pick_pose_stream_sec', 0.45))
+        phz = float(arm.get('pick_pose_stream_hz', 28.0))
+        if ph > 0.0 and phz > 0.0:
+            p = arm['stages']['stage3']
+            per = 1.0 / max(5.0, phz)
+            t_end = self.get_clock().now() + Duration(seconds=ph)
+            while rclpy.ok() and self.get_clock().now() < t_end:
+                self._arm_set(float(p['shoulder']), float(p['elbow']), float(p['wrist']))
+                self._spin_sleep(per)
 
-    def run_pick_sequence(
-        self,
-        pick_face: Optional[Tuple[float, float]],
-        pick_model: str,
-    ) -> None:
-        """Pick arm+magnets."""
-        arm = self._cfg.get('arm') or {}
-        defs = _default_config()['arm']
-        m = self._cfg.get('motion') or {}
-        mdef = _default_config()['motion']
-        if pick_face is not None:
-            self.rotate_to_face(pick_face[0], pick_face[1])
-            dist_tgt = float(
-                m.get('pick_target_distance_m', mdef.get('pick_target_distance_m', 0.25))
-            )
-            self._approach_xy_until_distance(pick_face[0], pick_face[1], dist_tgt)
+        top = ATTACH_TOPIC.get(name)
+        if top:
+            self._spin_sleep(float(arm.get('attach_pre_delay_sec', 0.45)))
+            nburst = max(1, int(arm.get('attach_burst_count', 5)))
+            bper = float(arm.get('attach_burst_period_sec', 0.18))
+            for i in range(nburst):
+                self._attach_pulse(top)
+                if i + 1 < nburst:
+                    self._spin_sleep(bper)
 
-        self.get_logger().info('Pick arm: RViz stage1 (rest / default)')
-        self._arm_goto_rviz_stage('stage1')
-        self.get_logger().info('Pick arm: RViz stage2 (intermediate)')
-        self._arm_goto_rviz_stage('stage2')
-        self.get_logger().info('Pick arm: RViz stage3 (magnet reach)')
-        self._arm_goto_rviz_stage('stage3')
-        hold_sec = float(arm.get('pick_pose_stream_sec', defs.get('pick_pose_stream_sec', 0.0)))
-        stream_hz = float(arm.get('pick_pose_stream_hz', defs.get('pick_pose_stream_hz', 0.0)))
-        if hold_sec > 0.0 and stream_hz > 0.0:
-            p = self._arm_rviz_stage_triplet('stage3')
-            self._arm_hold_rad(p['shoulder'], p['elbow'], p['wrist'], hold_sec, stream_hz)
-        for _ in range(12):
-            rclpy.spin_once(self, timeout_sec=0.0)
-        creep = float(arm.get('pick_creep_sec', 0.0))
-        if creep > 0.0:
-            self.get_logger().info(f'Pick: creep {creep:.1f}s (LiDAR contact hint)')
-            self.approach_contact(creep)
-        self.get_logger().info(f'Pick: magnet on — attach "{pick_model}"')
-        if not self.gz_attach_pickable(pick_model):
-            self.get_logger().error(
-                f'Attach failed for "{pick_model}". '
-                f'Valid models: {sorted(_GZ_ATTACH_TOPIC)}. '
-                'If model is valid, magnet may be beyond '
-                'arm.magnet_attach_radius_m (URDF sphere).'
-            )
-        wait_attach = float(arm.get('attach_wait_sec', defs.get('attach_wait_sec', 2.5)))
-        stream_hz = float(arm.get('attach_wait_arm_hz', defs.get('attach_wait_arm_hz', 25.0)))
-        p3 = self._arm_rviz_stage_triplet('stage3')
-        period = 1.0 / max(5.0, stream_hz) if stream_hz > 0.0 else None
-        t_next_wall = time.monotonic()
-        t_end = self.get_clock().now() + Duration(seconds=wait_attach)
+        wait_a = float(arm.get('attach_wait_sec', 2.5))
+        ahz = float(arm.get('attach_hz', 5.0))
+        aresend = float(arm.get('attach_resend_sec', 0.45))
+        p3 = arm['stages']['stage3']
+        per = 1.0 / max(5.0, ahz)
+        nxt_arm = time.monotonic()
+        nxt_attach = time.monotonic()
+        t_end = self.get_clock().now() + Duration(seconds=wait_a)
         while rclpy.ok() and self.get_clock().now() < t_end:
             rclpy.spin_once(self, timeout_sec=0.05)
-            if period is not None:
-                noww = time.monotonic()
-                if noww >= t_next_wall:
-                    self._arm_publish_rad(p3['shoulder'], p3['elbow'], p3['wrist'])
-                    t_next_wall = noww + period
-        self._sleep_sim(float(arm.get('pick_magnet_pause', 0.45)))
-        self.get_logger().info('Pick arm: stage2 (lift off table)')
-        self._arm_goto_rviz_stage('stage2')
-        self.get_logger().info('Pick arm: stage1 (carry / transport)')
-        self._arm_goto_rviz_stage('stage1')
+            now = time.monotonic()
+            if now >= nxt_arm:
+                self._arm_set(float(p3['shoulder']), float(p3['elbow']), float(p3['wrist']))
+                nxt_arm = now + per
+            if top and now >= nxt_attach:
+                self._attach_pulse(top)
+                nxt_attach = now + aresend
+        self._spin_sleep(float(arm.get('pick_magnet_pause', 0.5)))
+        self._stage('stage2')
+        self._stage('stage1')
+        self._carry = True
+        self.get_logger().info(f'Pick done {name}')
 
-    def run_drop_sequence(self) -> None:
-        """Drop sequence."""
-        arm = self._cfg.get('arm') or {}
-        defs = _default_config()['arm']
-        self.get_logger().info('Drop arm: RViz stage2')
-        self._arm_goto_rviz_stage('stage2')
-        self.get_logger().info('Drop arm: stage3 over bin (same joints as pick reach)')
-        p3 = self._arm_rviz_stage_triplet('stage3')
-        self._arm_publish_rad(p3['shoulder'], p3['elbow'], p3['wrist'])
-        self._sleep_sim(float(arm.get('settle_drop', defs.get('settle_drop', 0.9))))
-        d_hold = float(arm.get('drop_pose_stream_sec', defs.get('drop_pose_stream_sec', 0.0)))
-        d_hz = float(arm.get('drop_pose_stream_hz', defs.get('drop_pose_stream_hz', 0.0)))
-        if d_hold > 0.0 and d_hz > 0.0:
-            p = self._arm_rviz_stage_triplet('stage3')
-            self._arm_hold_rad(p['shoulder'], p['elbow'], p['wrist'], d_hold, d_hz)
-        for _ in range(10):
-            rclpy.spin_once(self, timeout_sec=0.0)
-        creep = float(arm.get('drop_creep_sec', 0.0))
-        if creep > 0.0:
-            self.get_logger().info(f'Drop: creep {creep:.1f}s')
-            self.approach_contact(creep)
-        self.get_logger().info('Drop: magnet off (detach all pickables)')
-        gz_detach_all_pickables()
-        self._sleep_sim(float(arm.get('drop_magnet_pause', 0.35)))
-        self.get_logger().info('Drop arm: RViz stage2 (retract)')
-        self._arm_goto_rviz_stage('stage2')
-        self.get_logger().info('Drop arm: RViz stage1 (rest)')
-        self._arm_goto_rviz_stage('stage1')
-
-    def approach_contact(self, duration_sec: float = 2.8) -> None:
-        """Nudge forward."""
-        t_end = self.get_clock().now() + Duration(seconds=duration_sec)
-        period = 1.0 / max(10.0, float(self._cfg['motion'].get('loop_rate_hz', 20.0)))
-        while self.get_clock().now() < t_end and rclpy.ok():
-            rclpy.spin_once(self, timeout_sec=0.0)
-            front, _, _, _ = self._obstacle_clearance()
-            t = Twist()
-            t.linear.x = 0.1
-            if front < 0.22 and not math.isinf(front):
-                self.get_logger().info('Near object (LiDAR front range)')
-                break
-            self._cmd_pub.publish(t)
-            self._sleep_sim(period)
-        self.stop()
+    def drop(self) -> None:
+        arm = self._cfg['arm']
+        dz = self._cfg.get('drop_zone', {})
+        bx = float(dz.get('center_x', DEFAULT_BOX[0]))
+        by = float(dz.get('center_y', DEFAULT_BOX[1]))
+        self.face_toward(bx, by, 'drop face bin')
+        self._stage('stage2')
+        p3 = arm['stages']['stage3']
+        self._arm_set(float(p3['shoulder']), float(p3['elbow']), float(p3['wrist']))
+        self._spin_sleep(float(arm.get('settle_drop', 1.0)))
+        dh = float(arm.get('drop_pose_stream_sec', 0.35))
+        dhz = float(arm.get('drop_pose_stream_hz', 28.0))
+        if dh > 0.0 and dhz > 0.0:
+            per = 1.0 / max(5.0, dhz)
+            t_end = self.get_clock().now() + Duration(seconds=dh)
+            while rclpy.ok() and self.get_clock().now() < t_end:
+                self._arm_set(float(p3['shoulder']), float(p3['elbow']), float(p3['wrist']))
+                self._spin_sleep(per)
+        self._magnet_off_pulse()
+        self._spin_sleep(float(arm.get('drop_magnet_pause', 0.4)))
+        self._stage('stage2')
+        self._stage('stage1')
+        self._carry = False
+        self.get_logger().info('Drop done')
 
     def run_mission(self) -> None:
-        self.wait_for_sim_ready()
-        self.get_logger().info(
-            'Arm: staged carry after odom '
-            '(see arm.wait_stream_* / bootstrap_stages)'
-        )
-        self.arm_stage_to_carry()
-        self._open_log()
-        m = self._cfg['motion']
-        mlim = float(m.get('mission_time_limit_sec', 280.0))
-        deadline = self.get_clock().now() + Duration(seconds=mlim)
-        log_next = self.get_clock().now()
-        waypoints: List[Dict[str, Any]] = self._cfg.get('waypoints') or []
-        if not waypoints:
-            self.get_logger().error('No waypoints in config; aborting')
-            return
-
-        nwp = len(waypoints)
-        self.get_logger().info(
-            f'Starting tidying mission — {nwp} waypoints: '
-            'navigate (align then drive) → optional drop/pick → next'
-        )
-        picked = False
-        wi = 0
-        while rclpy.ok() and self.get_clock().now() < deadline:
-            rclpy.spin_once(self, timeout_sec=0.0)
-            if wi >= nwp:
+        self.get_logger().info('Wait odom…')
+        t0 = time.monotonic()
+        while rclpy.ok() and time.monotonic() - t0 < 60.0:
+            rclpy.spin_once(self, timeout_sec=0.05)
+            if self._odom_n >= 3:
                 break
-            wp = waypoints[wi]
-            wx = float(wp['x'])
-            wy = float(wp['y'])
-            label = str(wp.get('name', f'wp{wi}'))
-            pos_tol_wp = wp.get('pos_tol')
-            pos_tol_override = float(pos_tol_wp) if pos_tol_wp is not None else None
-            if wp.get('release_magnet'):
-                hx, hy = self._drop_approach_hold_xy()
-                self.get_logger().info(
-                    f'Executing waypoint {wi + 1}/{nwp}: {label} -> '
-                    f'drop hold ({hx:.2f},{hy:.2f}) [standoff from bin]'
-                )
-                ok = self.navigate_to(
-                    hx,
-                    hy,
-                    f'{label} (bin standoff)',
-                    pos_tol_override=pos_tol_override,
-                )
-            else:
-                self.get_logger().info(
-                    f'Executing waypoint {wi + 1}/{nwp}: {label} -> ({wx:.1f},{wy:.1f})'
-                )
-                ok = self.navigate_to(
-                    wx,
-                    wy,
-                    label,
-                    pos_tol_override=pos_tol_override,
-                )
-            if not ok:
-                self.get_logger().warn(f'Waypoint failed (continue): {label}')
-            else:
-                if wp.get('release_magnet'):
-                    self.run_drop_sequence()
-                    picked = False
-
-            pick_face: Optional[Tuple[float, float]] = None
-            pick_model: Optional[str] = None
-            if isinstance(wp.get('pick'), dict):
-                pk = wp['pick']
-                if 'face_x' in pk and 'face_y' in pk:
-                    pick_face = (float(pk['face_x']), float(pk['face_y']))
-                if 'model' in pk:
-                    pick_model = str(pk['model']).strip()
-                do_pick = True
-            elif wp.get('pick_after'):
-                do_pick = True
-                if 'pick_face_x' in wp and 'pick_face_y' in wp:
-                    pick_face = (float(wp['pick_face_x']), float(wp['pick_face_y']))
-                if wp.get('pick_model') is not None:
-                    pick_model = str(wp['pick_model']).strip()
-            else:
-                do_pick = False
-
-            if do_pick and ok:
-                if not pick_model:
-                    pick_model = 'can'
-                    self.get_logger().warn(
-                        'Waypoint has pick_after but no pick_model; defaulting to "can". '
-                        'Set pick_model (SDF model name) to avoid wrong attach.'
-                    )
-                if pick_face is None:
-                    pick_face = _pick_face_xy_for_model(pick_model)
-                self.run_pick_sequence(pick_face, pick_model)
-                picked = True
-
-            wi += 1
-
-            if (self.get_clock().now() - log_next).nanoseconds * 1e-9 >= 0.25:
-                self._log_sample()
-                log_next = self.get_clock().now()
-
-        if picked:
-            self.get_logger().info('Detaching pickables at mission end')
-            gz_detach_all_pickables()
-            self._sleep_sim(0.5)
-
-        self.stop()
-        wx, wy, _ = self.world_pose()
-        rooms = ', '.join(sorted(self._rooms_visited))
+        self._spin_sleep(0.5)
+        x, y, yw = self.world_pose()
         self.get_logger().info(
-            f'=== Mission complete === distance_travelled={self._total_dist:.2f} m | '
-            f'rooms_seen=[{rooms}] | final_world=({wx:.2f},{wy:.2f}) | '
-            f'scan_ok={self._scan_seen} | cam_msgs={self._cam_samples}'
+            f'World ({x:.3f},{y:.3f}) yaw={yw:.3f} spawn=({self._spawn[0]},{self._spawn[1]}) '
+            f'spawn_yaw={self._spawn_yaw:.3f}'
         )
-        if self._csv_file:
-            self._csv_file.close()
-            self._csv_file = None
+
+        pi = math.pi
+        m = self._m()
+        self._wait_imu_ready('(mission start)')
+
+        try:
+            # 1) Row → halt → pick
+            self.drive_to(7.5, 5.4, 'toy row')
+            self._halt_stop()
+            self.pick('toy_block_1', drive_in=False)
+            self._halt_stop()
+            # 2) 180° in place (IMU only)
+            self.turn_by_imu(pi, '180 after pick')
+            self._halt_stop()
+            # 3) Hardcoded +Y leg to (7.5, 8.5): see _pre_drop_drive_hardcoded.
+            self._pre_drop_drive_hardcoded()
+            self._halt_stop()
+            # 4) 90° (IMU only) → drop
+            d90 = float(m.get('pre_drop_turn_rad', pi / 2.0))
+            self.turn_by_imu(d90, '90 before drop')
+            self._halt_stop()
+            self._pause()
+            self.drop()
+
+            self.drive_to(1.75, 9.0, 'can halt')
+            self._pause()
+            self.pick('can')
+
+            self.drive_to(7.5, 9.0, 'after can → bin')
+            self._pause()
+            self.drop()
+
+            self.drive_to(7.5, 2.0, 'to corridor')
+            self._pause()
+            self.drive_to(1.75, 2.0, 'ball halt')
+            self._pause()
+            self.pick('ball')
+
+            self.drive_to(7.5, 2.0, 'return y=2')
+            self._pause()
+            self.drive_to(7.5, 9.0, 'final bin row')
+            self._pause()
+            self.drop()
+
+            self.turn_to_yaw(pi, 'park π')
+        finally:
+            self.stop()
+            if self._carry:
+                self.get_logger().warn('Still carrying — magnet_off')
+                self._magnet_off_pulse()
+                self._carry = False
+        self.get_logger().info('Mission finished')
 
 
-def main(args: Optional[List[str]] = None) -> None:
-    rclpy.init(args=args)
-    node = DriftbotTaskNode()
+def main() -> None:
+    rclpy.init()
+    n = TaskNode()
     try:
-        node.run_mission()
-    except KeyboardInterrupt:
-        node.stop()
+        n.run_mission()
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
     finally:
-        node.destroy_node()
-        rclpy.shutdown()
+        n.stop()
+        try:
+            n.destroy_node()
+        except Exception:
+            pass
+        try:
+            rclpy.shutdown()
+        except Exception:
+            pass
 
 
 if __name__ == '__main__':

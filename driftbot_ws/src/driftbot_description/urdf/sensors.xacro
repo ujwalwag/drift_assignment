@@ -95,4 +95,26 @@
     </sensor>
   </gazebo>
 
+  <!-- World-frame yaw for in-place turns (avoids diff-drive odom yaw integration error). -->
+  <gazebo reference="base_link">
+    <sensor name="base_imu" type="imu">
+      <always_on>true</always_on>
+      <update_rate>100</update_rate>
+      <visualize>false</visualize>
+      <topic>imu</topic>
+      <imu>
+        <angular_velocity>
+          <x><noise type="gaussian"><mean>0</mean><stddev>1e-4</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0</mean><stddev>1e-4</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0</mean><stddev>1e-4</stddev></noise></z>
+        </angular_velocity>
+        <linear_acceleration>
+          <x><noise type="gaussian"><mean>0</mean><stddev>0.01</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0</mean><stddev>0.01</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0</mean><stddev>0.01</stddev></noise></z>
+        </linear_acceleration>
+      </imu>
+    </sensor>
+  </gazebo>
+
 </robot>

@@ -3,7 +3,7 @@
 <package format="3">
   <name>driftbot_task</name>
   <version>0.0.0</version>
-  <description>Autonomous tidying: Gazebo bridges, waypoint driving, magnet pick/drop, telemetry.</description>
+  <description>Scripted sim mission: Gazebo bridge, joint/TF/scan support, magnet pick/drop.</description>
   <maintainer email="ujwalwag@todo.todo">ujwalwag</maintainer>
   <license>Apache-2.0</license>
 
@@ -12,9 +12,7 @@
   <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>std_msgs</depend>
-  <depend>visualization_msgs</depend>
   <depend>tf2_ros</depend>
-  <depend>tf2_geometry_msgs</depend>
 
   <exec_depend>python3-yaml</exec_depend>
   <exec_depend>image_view</exec_depend>

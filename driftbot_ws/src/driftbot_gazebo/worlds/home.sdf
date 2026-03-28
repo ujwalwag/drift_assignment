@@ -21,6 +21,7 @@
     <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
       <render_engine>ogre2</render_engine>
     </plugin>
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
     <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
     <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
 
@@ -337,36 +338,36 @@
     <include>
       <uri>model://table_dining</uri>
       <name>dining_table_room2</name>
-      <pose>5.0 5.5 0 0 0 0</pose>
-      <scale>2.0 1.6 1.8</scale>
+      <pose>5.0 5.0 0 0 0 0</pose>
+      <scale>1.3 1.3 1.3</scale>
     </include>
 
     <!-- chairs -->
     <include>
       <uri>model://chair_1</uri>
       <name>chair_n_room2</name>
-      <pose>6.0 5.5 0 0 0 -3.14159</pose>
+      <pose>6.0 5.0 0 0 0 -3.14159</pose>
       <scale>1.3 1.3 1.3</scale>
     </include>
 
     <include>
       <uri>model://chair_1</uri>
       <name>chair_e_room2</name>
-      <pose>5.0 5.0 0 0 0 1.5708</pose>
+      <pose>5.0 4.5 0 0 0 1.5708</pose>
       <scale>1.3 1.3 1.3</scale>
     </include>
 
     <include>
       <uri>model://chair_1</uri>
       <name>chair_s_room2</name>
-      <pose>4.0 5.5 0 0 0 0</pose>
+      <pose>4.0 5.0 0 0 0 0</pose>
       <scale>1.3 1.3 1.3</scale>
     </include>
 
     <include>
       <uri>model://chair_1</uri>
       <name>chair_w_room2</name>
-      <pose>5.0 6.0 0 0 0 4.71239</pose>
+      <pose>5.0 5.5 0 0 0 4.71239</pose>
       <scale>1.3 1.3 1.3</scale>
     </include>
 
@@ -405,7 +406,7 @@
     <!-- pickables -->
 
     <model name="toy_block_1">
-      <pose>-5.0 3.5 0.05 0 0 0</pose>
+      <pose>7.5 5.0 0.05 0 0 0</pose>
       <link name="link">
         <collision name="col">
           <pose>0 0 0 0 0 0</pose>
@@ -425,7 +426,7 @@
     </model>
 
     <model name="toy_block_2">
-      <pose>-2.5 8.0 0.045 0 0 0</pose>
+      <pose>-5.0 5.0 0.045 0 0 0</pose>
       <link name="link">
         <collision name="col">
           <pose>0 0 0 0 0 0</pose>
@@ -445,7 +446,7 @@
     </model>
 
     <model name="toy_block_3">
-      <pose>8.0 7.0 0.05 0 0 0</pose>
+      <pose>-2.0 2.0 0.05 0 0 0</pose>
       <link name="link">
         <collision name="col">
           <pose>0 0 0 0 0 0</pose>
@@ -465,7 +466,7 @@
     </model>
 
     <model name="toy_cylinder_1">
-      <pose>-7.0 7.0 0.05 0 0 0</pose>
+      <pose>-8.0 3.0 0.05 0 0 0</pose>
       <link name="link">
         <collision name="col">
           <pose>0 0 0 0 0 0</pose>
@@ -484,9 +485,9 @@
       </link>
     </model>
 
-    <!-- can z -->
+    <!-- can: straight ahead of spawn on y=9 (+x row to collection box) -->
     <model name="can">
-      <pose>1.5 7.5 0.065 0 0 0</pose>
+      <pose>1.5 9.0 0.065 0 0 0</pose>
       <link name="link">
         <collision name="col">
           <pose>0 0 0 0 0 0</pose>
@@ -506,7 +507,7 @@
     </model>
 
     <model name="ball">
-      <pose>6.0 3.5 0.05 0 0 0</pose>
+      <pose>1.5 2.0 0.05 0 0 0</pose>
       <link name="link">
         <collision name="col">
           <pose>0 0 0 0 0 0</pose>

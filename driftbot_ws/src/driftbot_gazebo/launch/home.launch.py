@@ -1,4 +1,4 @@
-"""Gazebo home + spawn. Tidying: driftbot_task tidying.launch.py."""
+"""Gazebo home world + robot spawn."""
 import os
 
 from ament_index_python.packages import get_package_share_directory
@@ -48,7 +48,22 @@ def generate_launch_description():
 
         DeclareLaunchArgument(
             "spawn_z", default_value="0.01",
-            description="spawn z m",
+            description="Spawn height (m).",
+        ),
+        DeclareLaunchArgument(
+            "spawn_x",
+            default_value="7.5",
+            description="Spawn world x (m).",
+        ),
+        DeclareLaunchArgument(
+            "spawn_y",
+            default_value="9.0",
+            description="Spawn world y (m).",
+        ),
+        DeclareLaunchArgument(
+            "spawn_yaw",
+            default_value="-1.5708",
+            description="Initial yaw (rad) about +Z.",
         ),
         DeclareLaunchArgument(
             "software_gl",
@@ -98,11 +113,12 @@ def generate_launch_description():
             executable="create",
             name="spawn_driftbot",
             arguments=[
-                "-name",  "driftbot",
+                "-name", "driftbot",
                 "-topic", "robot_description",
-                "-x",     "1.5",
-                "-y",     "9.0",
-                "-z",     LaunchConfiguration("spawn_z"),
+                "-x", LaunchConfiguration("spawn_x"),
+                "-y", LaunchConfiguration("spawn_y"),
+                "-z", LaunchConfiguration("spawn_z"),
+                "-Y", LaunchConfiguration("spawn_yaw"),
             ],
             output="screen",
         ),

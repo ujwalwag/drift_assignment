@@ -1,4 +1,4 @@
-# gz↔ros names; tidying.yaml mission
+# ros_gz_bridge: Gazebo ↔ ROS topic map for driftbot home sim.
 
 - ros_topic_name: "/clock"
   gz_topic_name: "/clock"
@@ -18,26 +18,17 @@
   gz_type_name: "gz.msgs.Odometry"
   direction: GZ_TO_ROS
 
-# js stamp fix
 - ros_topic_name: "/joint_states_gz"
   gz_topic_name: "/joint_states"
   ros_type_name: "sensor_msgs/msg/JointState"
   gz_type_name: "gz.msgs.Model"
   direction: GZ_TO_ROS
 
-# lidar in
 - ros_topic_name: "/scan_raw"
   gz_topic_name: "/scan"
   ros_type_name: "sensor_msgs/msg/LaserScan"
   gz_type_name: "gz.msgs.LaserScan"
   direction: GZ_TO_ROS
-
-# alt lidar path:
-# - ros_topic_name: "/scan_raw"
-#   gz_topic_name: "/world/driftbot_home/model/driftbot/link/lidar_link/sensor/driftbot_lidar/scan"
-#   ros_type_name: "sensor_msgs/msg/LaserScan"
-#   gz_type_name: "gz.msgs.LaserScan"
-#   direction: GZ_TO_ROS
 
 - ros_topic_name: "/arm_cmd_shoulder"
   gz_topic_name: "/arm_cmd_shoulder"
@@ -56,6 +47,37 @@
   ros_type_name: "std_msgs/msg/Float64"
   gz_type_name: "gz.msgs.Double"
   direction: ROS_TO_GZ
+
+# DetachableJoint attach / magnet (reliable vs gz CLI from task_node)
+- ros_topic_name: "/magnet_off"
+  gz_topic_name: "/magnet_off"
+  ros_type_name: "std_msgs/msg/Empty"
+  gz_type_name: "gz.msgs.Empty"
+  direction: ROS_TO_GZ
+
+- ros_topic_name: "/toy_block_1/attach"
+  gz_topic_name: "/toy_block_1/attach"
+  ros_type_name: "std_msgs/msg/Empty"
+  gz_type_name: "gz.msgs.Empty"
+  direction: ROS_TO_GZ
+
+- ros_topic_name: "/can/attach"
+  gz_topic_name: "/can/attach"
+  ros_type_name: "std_msgs/msg/Empty"
+  gz_type_name: "gz.msgs.Empty"
+  direction: ROS_TO_GZ
+
+- ros_topic_name: "/ball/attach"
+  gz_topic_name: "/ball/attach"
+  ros_type_name: "std_msgs/msg/Empty"
+  gz_type_name: "gz.msgs.Empty"
+  direction: ROS_TO_GZ
+
+- ros_topic_name: "/imu/data"
+  gz_topic_name: "/imu"
+  ros_type_name: "sensor_msgs/msg/Imu"
+  gz_type_name: "gz.msgs.IMU"
+  direction: GZ_TO_ROS
 
 - ros_topic_name: "/camera/image_raw"
   gz_topic_name: "/camera/image_raw"
