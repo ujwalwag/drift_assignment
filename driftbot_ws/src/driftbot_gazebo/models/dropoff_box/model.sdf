@@ -14,29 +14,26 @@
             <izz>0.1033038684</izz>
           </inertia>
         </inertial>
-        <!-- mesh aabb -->
-        <collision name="collision">
-          <pose>0 0 0.155 0 0 0</pose>
-          <geometry>
-            <box><size>0.68 0.90 0.31</size></box></geometry>
-          <surface>
-            <friction>
-              <ode>
-                <mu>30.0</mu>
-                <mu2>30.0</mu2>
-              </ode>
-            </friction>
-            <contact>
-              <ode>
-                <soft_cfm>0</soft_cfm>
-    	          <soft_erp>0.2</soft_erp>
-    	          <kp>1e+13</kp>
-    	          <kd>1</kd>
-    	          <max_vel>0.01</max_vel>
-    	          <min_depth>0</min_depth>
-              </ode>
-            </contact>
-          </surface>
+        <!-- hollow box: floor + 4 walls so objects fall inside -->
+        <collision name="floor">
+          <pose>0 0 0.01 0 0 0</pose>
+          <geometry><box><size>0.68 0.90 0.02</size></box></geometry>
+        </collision>
+        <collision name="wall_px">
+          <pose>0.33 0 0.155 0 0 0</pose>
+          <geometry><box><size>0.02 0.90 0.31</size></box></geometry>
+        </collision>
+        <collision name="wall_nx">
+          <pose>-0.33 0 0.155 0 0 0</pose>
+          <geometry><box><size>0.02 0.90 0.31</size></box></geometry>
+        </collision>
+        <collision name="wall_py">
+          <pose>0 0.44 0.155 0 0 0</pose>
+          <geometry><box><size>0.68 0.02 0.31</size></box></geometry>
+        </collision>
+        <collision name="wall_ny">
+          <pose>0 -0.44 0.155 0 0 0</pose>
+          <geometry><box><size>0.68 0.02 0.31</size></box></geometry>
         </collision>
         <visual name="visual">
           <geometry>

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Republish Gazebo bridge topics: joint_states, TF from odom, scan frame fix."""
+"""GZ bridge support."""
 
 from __future__ import annotations
 
@@ -64,14 +64,18 @@ class GzBridgeSupport(Node):
         )
 
         qos_be = QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT)
+
+        # Joint relay
         self._js_pub = self.create_publisher(JointState, 'joint_states', qos_be)
         self.create_subscription(JointState, 'joint_states_gz', self._js_cb, qos_be)
         self._js_ok = False
 
+        # Odom TF
         self._tf_b = TransformBroadcaster(self)
         odom_qos = QoSProfile(depth=50, reliability=ReliabilityPolicy.RELIABLE)
         self.create_subscription(Odometry, 'odom', self._odom_cb, odom_qos)
 
+        # Scan relay
         self._scan_pub = self.create_publisher(LaserScan, 'scan', qos_be)
         self.create_subscription(LaserScan, 'scan_raw', self._scan_cb, qos_be)
         self._scan_n = 0
@@ -122,7 +126,7 @@ class GzBridgeSupport(Node):
 
     def _scan_warn(self) -> None:
         if self._scan_n == 0:
-            self.get_logger().warn('No /scan_raw — check ros_gz_bridge config.')
+            self.get_logger().warn('No /scan_raw received')
 
 
 def main() -> None:

@@ -1,92 +1,97 @@
-# ros_gz_bridge: Gazebo ↔ ROS topic map for driftbot home sim.
-
-- ros_topic_name: "/clock"
-  gz_topic_name: "/clock"
-  ros_type_name: "rosgraph_msgs/msg/Clock"
-  gz_type_name: "gz.msgs.Clock"
+# Clock
+- ros_topic_name: /clock
+  gz_topic_name: /clock
+  ros_type_name: rosgraph_msgs/msg/Clock
+  gz_type_name: gz.msgs.Clock
   direction: GZ_TO_ROS
 
-- ros_topic_name: "/cmd_vel"
-  gz_topic_name: "/cmd_vel"
-  ros_type_name: "geometry_msgs/msg/Twist"
-  gz_type_name: "gz.msgs.Twist"
+# Drive
+- ros_topic_name: /cmd_vel
+  gz_topic_name: /cmd_vel
+  ros_type_name: geometry_msgs/msg/Twist
+  gz_type_name: gz.msgs.Twist
   direction: ROS_TO_GZ
 
-- ros_topic_name: "/odom"
-  gz_topic_name: "/odom"
-  ros_type_name: "nav_msgs/msg/Odometry"
-  gz_type_name: "gz.msgs.Odometry"
+# Odometry
+- ros_topic_name: /odom
+  gz_topic_name: /odom
+  ros_type_name: nav_msgs/msg/Odometry
+  gz_type_name: gz.msgs.Odometry
   direction: GZ_TO_ROS
 
-- ros_topic_name: "/joint_states_gz"
-  gz_topic_name: "/joint_states"
-  ros_type_name: "sensor_msgs/msg/JointState"
-  gz_type_name: "gz.msgs.Model"
+# Joint states
+- ros_topic_name: /joint_states_gz
+  gz_topic_name: /joint_states
+  ros_type_name: sensor_msgs/msg/JointState
+  gz_type_name: gz.msgs.Model
   direction: GZ_TO_ROS
 
-- ros_topic_name: "/scan_raw"
-  gz_topic_name: "/scan"
-  ros_type_name: "sensor_msgs/msg/LaserScan"
-  gz_type_name: "gz.msgs.LaserScan"
+# Lidar raw
+- ros_topic_name: /scan_raw
+  gz_topic_name: /scan
+  ros_type_name: sensor_msgs/msg/LaserScan
+  gz_type_name: gz.msgs.LaserScan
   direction: GZ_TO_ROS
 
-- ros_topic_name: "/arm_cmd_shoulder"
-  gz_topic_name: "/arm_cmd_shoulder"
-  ros_type_name: "std_msgs/msg/Float64"
-  gz_type_name: "gz.msgs.Double"
+# Arm shoulder
+- ros_topic_name: /arm_cmd_shoulder
+  gz_topic_name: /arm_cmd_shoulder
+  ros_type_name: std_msgs/msg/Float64
+  gz_type_name: gz.msgs.Double
   direction: ROS_TO_GZ
 
-- ros_topic_name: "/arm_cmd_elbow"
-  gz_topic_name: "/arm_cmd_elbow"
-  ros_type_name: "std_msgs/msg/Float64"
-  gz_type_name: "gz.msgs.Double"
+# Arm elbow
+- ros_topic_name: /arm_cmd_elbow
+  gz_topic_name: /arm_cmd_elbow
+  ros_type_name: std_msgs/msg/Float64
+  gz_type_name: gz.msgs.Double
   direction: ROS_TO_GZ
 
-- ros_topic_name: "/arm_cmd_wrist"
-  gz_topic_name: "/arm_cmd_wrist"
-  ros_type_name: "std_msgs/msg/Float64"
-  gz_type_name: "gz.msgs.Double"
+# Arm wrist
+- ros_topic_name: /arm_cmd_wrist
+  gz_topic_name: /arm_cmd_wrist
+  ros_type_name: std_msgs/msg/Float64
+  gz_type_name: gz.msgs.Double
   direction: ROS_TO_GZ
 
-# DetachableJoint attach / magnet (reliable vs gz CLI from task_node)
-- ros_topic_name: "/magnet_off"
-  gz_topic_name: "/magnet_off"
-  ros_type_name: "std_msgs/msg/Empty"
-  gz_type_name: "gz.msgs.Empty"
-  direction: ROS_TO_GZ
-
-- ros_topic_name: "/toy_block_1/attach"
-  gz_topic_name: "/toy_block_1/attach"
-  ros_type_name: "std_msgs/msg/Empty"
-  gz_type_name: "gz.msgs.Empty"
-  direction: ROS_TO_GZ
-
-- ros_topic_name: "/can/attach"
-  gz_topic_name: "/can/attach"
-  ros_type_name: "std_msgs/msg/Empty"
-  gz_type_name: "gz.msgs.Empty"
-  direction: ROS_TO_GZ
-
-- ros_topic_name: "/ball/attach"
-  gz_topic_name: "/ball/attach"
-  ros_type_name: "std_msgs/msg/Empty"
-  gz_type_name: "gz.msgs.Empty"
-  direction: ROS_TO_GZ
-
-- ros_topic_name: "/imu/data"
-  gz_topic_name: "/imu"
-  ros_type_name: "sensor_msgs/msg/Imu"
-  gz_type_name: "gz.msgs.IMU"
+# Camera
+- ros_topic_name: /camera/image_raw
+  gz_topic_name: /camera/image_raw
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: gz.msgs.Image
   direction: GZ_TO_ROS
 
-- ros_topic_name: "/camera/image_raw"
-  gz_topic_name: "/camera/image_raw"
-  ros_type_name: "sensor_msgs/msg/Image"
-  gz_type_name: "gz.msgs.Image"
+# IMU
+- ros_topic_name: /imu/data
+  gz_topic_name: /imu
+  ros_type_name: sensor_msgs/msg/Imu
+  gz_type_name: gz.msgs.IMU
   direction: GZ_TO_ROS
 
-- ros_topic_name: "/camera/camera_info"
-  gz_topic_name: "/camera/camera_info"
-  ros_type_name: "sensor_msgs/msg/CameraInfo"
-  gz_type_name: "gz.msgs.CameraInfo"
-  direction: GZ_TO_ROS
+# Attach block
+- ros_topic_name: /toy_block_1/attach
+  gz_topic_name: /toy_block_1/attach
+  ros_type_name: std_msgs/msg/Empty
+  gz_type_name: gz.msgs.Empty
+  direction: ROS_TO_GZ
+
+# Attach can
+- ros_topic_name: /can/attach
+  gz_topic_name: /can/attach
+  ros_type_name: std_msgs/msg/Empty
+  gz_type_name: gz.msgs.Empty
+  direction: ROS_TO_GZ
+
+# Attach ball
+- ros_topic_name: /ball/attach
+  gz_topic_name: /ball/attach
+  ros_type_name: std_msgs/msg/Empty
+  gz_type_name: gz.msgs.Empty
+  direction: ROS_TO_GZ
+
+# Magnet off
+- ros_topic_name: /magnet_off
+  gz_topic_name: /magnet_off
+  ros_type_name: std_msgs/msg/Empty
+  gz_type_name: gz.msgs.Empty
+  direction: ROS_TO_GZ
